@@ -17,22 +17,29 @@ use Illuminate\Support\Facades\Route;
 
 // Auth routes (public)
 Route::post('/login', [AuthController::class, 'login']);
-Route::post('/register', [AuthController::class, 'register']);
 
 // Protected routes
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:api'])->group(function () {
     // Auth
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::post('/refresh', [AuthController::class, 'refresh']);
+    
+    // Register user baru (hanya super_admin)
+    Route::post('/register', [AuthController::class, 'register'])->middleware('role:super_admin');
 
-    // Bahan Baku
-    Route::apiResource('bahan-baku', BahanBakuController::class);
+    // Bahan Baku (admin dan super_admin)
+    Route::middleware('role:super_admin,admin')->group(function () {
+        Route::apiResource('bahan-baku', BahanBakuController::class);
+    });
 
-    // Menu
-    Route::apiResource('menu', MenuController::class);
-    Route::get('menu/{id}/cek-stok', [MenuController::class, 'cekStok']);
+    // Menu (admin dan super_admin)
+    Route::middleware('role:super_admin,admin')->group(function () {
+        Route::apiResource('menu', MenuController::class);
+        Route::get('menu/{id}/cek-stok', [MenuController::class, 'cekStok']);
+    });
 
-    // Transaksi
+    // Transaksi (semua role bisa akses)
     Route::apiResource('transaksi', TransaksiController::class)->except(['update', 'destroy']);
-    Route::post('transaksi/{id}/batal', [TransaksiController::class, 'batal']);
+    Route::post('transaksi/{id}/batal', [TransaksiController::class, 'batal'])->middleware('role:super_admin,admin');
 });
