@@ -87,14 +87,14 @@ export function ThemeSwitcher() {
 // Preview colors for themes
 function getThemePreviewColor(theme: ThemeName): string {
     const colors: Record<ThemeName, string> = {
-        blue: "oklch(0.62 0.21 259.23)",
-        red: "oklch(0.55 0.22 11.32)",
-        "amber-minimal": "oklch(0.78 0.08 45.00)",
-        "amethyst-haze": "oklch(0.61 0.08 299.75)",
-        "art-deco": "oklch(0.77 0.14 91.27)",
-        catppuccin: "oklch(0.61 0.24 293.46)",
-        nature: "oklch(0.64 0.18 142.5)",
-        "ocean-breeze": "oklch(0.60 0.11 184.15)",
+        blue: "rgb(59 130 246)",
+        red: "rgb(220 38 38)",
+        "amber-minimal": "rgb(245 158 11)",
+        "amethyst-haze": "rgb(168 85 247)",
+        "art-deco": "rgb(212 175 55)",
+        catppuccin: "rgb(137 180 250)",
+        nature: "rgb(34 197 94)",
+        "ocean-breeze": "rgb(14 165 233)",
     };
     return colors[theme];
 }
