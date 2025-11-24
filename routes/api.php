@@ -23,7 +23,6 @@ Route::middleware(['auth:api'])->group(function () {
     // Auth
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
-    Route::post('/refresh', [AuthController::class, 'refresh']);
     
     // Register user baru (hanya super_admin)
     Route::post('/register', [AuthController::class, 'register'])->middleware('role:super_admin');

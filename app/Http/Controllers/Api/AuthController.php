@@ -176,30 +176,6 @@ class AuthController extends Controller
 
     /**
      * @OA\Post(
-     *     path="/api/refresh",
-     *     summary="Refresh JWT token",
-     *     tags={"Authentication"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Response(
-     *         response=200,
-     *         description="Token berhasil di-refresh"
-     *     )
-     * )
-     */
-    public function refresh()
-    {
-        return response()->json([
-            'sukses' => true,
-            'data' => [
-                'token' => auth()->refresh(),
-                'token_type' => 'bearer',
-                'expires_in' => auth()->factory()->getTTL() * 60
-            ]
-        ]);
-    }
-
-    /**
-     * @OA\Post(
      *     path="/api/register",
      *     summary="Register user baru (Hanya Super Admin)",
      *     tags={"Authentication"},

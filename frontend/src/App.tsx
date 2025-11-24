@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { LoginPage } from "./pages/LoginPage";
 import { DashboardPage } from "./pages/DashboardPage";
+import { BahanBakuPage } from "./pages/BahanBakuPage";
+import { MenuPage } from "./pages/MenuPage";
 
 function App() {
     const isAuthenticated = !!localStorage.getItem("token");
@@ -23,6 +25,27 @@ function App() {
                     element={
                         isAuthenticated ? (
                             <DashboardPage />
+                        ) : (
+                            <Navigate to="/login" />
+                            // <DashboardPage />
+                        )
+                    }
+                />
+                <Route
+                    path="/bahan-baku"
+                    element={
+                        isAuthenticated ? (
+                            <BahanBakuPage />
+                        ) : (
+                            <Navigate to="/login" />
+                        )
+                    }
+                />
+                <Route
+                    path="/menu"
+                    element={
+                        isAuthenticated ? (
+                            <MenuPage />
                         ) : (
                             <Navigate to="/login" />
                         )

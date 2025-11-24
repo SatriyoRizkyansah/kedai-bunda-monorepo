@@ -17,7 +17,9 @@
     "paths": {
         "/api/login": {
             "post": {
-                "tags": ["Authentication"],
+                "tags": [
+                    "Authentication"
+                ],
                 "summary": "Login pengguna",
                 "operationId": "222b2625838e3c57e017987f73598fda",
                 "requestBody": {
@@ -25,7 +27,10 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": ["email", "password"],
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
                                 "properties": {
                                     "email": {
                                         "type": "string",
@@ -105,7 +110,9 @@
         },
         "/api/logout": {
             "post": {
-                "tags": ["Authentication"],
+                "tags": [
+                    "Authentication"
+                ],
                 "summary": "Logout pengguna",
                 "operationId": "ad65cbbd4e9f201619eae184a5961a98",
                 "responses": {
@@ -122,7 +129,9 @@
         },
         "/api/me": {
             "get": {
-                "tags": ["Authentication"],
+                "tags": [
+                    "Authentication"
+                ],
                 "summary": "Get data user yang sedang login",
                 "operationId": "8367feff40ba10e43187792cad3132c1",
                 "responses": {
@@ -137,26 +146,11 @@
                 ]
             }
         },
-        "/api/refresh": {
-            "post": {
-                "tags": ["Authentication"],
-                "summary": "Refresh JWT token",
-                "operationId": "f6409cd8d794404a6410b0767432b0f4",
-                "responses": {
-                    "200": {
-                        "description": "Token berhasil di-refresh"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
         "/api/register": {
             "post": {
-                "tags": ["Authentication"],
+                "tags": [
+                    "Authentication"
+                ],
                 "summary": "Register user baru (Hanya Super Admin)",
                 "operationId": "8e4e3cb7b46126f4696379d3c7eeb4ad",
                 "requestBody": {
@@ -192,7 +186,10 @@
                                     },
                                     "role": {
                                         "type": "string",
-                                        "enum": ["super_admin", "admin"],
+                                        "enum": [
+                                            "super_admin",
+                                            "admin"
+                                        ],
                                         "example": "admin"
                                     }
                                 },
