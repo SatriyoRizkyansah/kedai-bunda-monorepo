@@ -1,0 +1,287 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Http\Resources\TransaksiResource;
+use App\Models\Transaksi;
+use App\Models\DetailTransaksi;
+use App\Models\Menu;
+use App\Models\BahanBaku;
+use App\Models\StokLog;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+
+class TransaksiController extends Controller
+{
+    /**
+     * Menampilkan daftar transaksi
+     */
+    public function index(Request $request)
+    {
+        $query = Transaksi::with(['user', 'detailTransaksi.menu']);
+
+        // Filter berdasarkan tanggal
+        if ($request->has('tanggal_mulai') && $request->has('tanggal_selesai')) {
+            $query->whereBetween('created_at', [
+                $request->tanggal_mulai . ' 00:00:00',
+                $request->tanggal_selesai . ' 23:59:59'
+            ]);
+        }
+
+        // Filter berdasarkan status
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $transaksi = $query->orderBy('created_at', 'desc')->get();
+
+        return response()->json([
+            'sukses' => true,
+            'pesan' => 'Berhasil mengambil data transaksi',
+            'data' => TransaksiResource::collection($transaksi)
+        ]);
+    }
+
+    /**
+     * Membuat transaksi baru
+     */
+    public function store(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id',
+            'bayar' => 'required|numeric|min:0',
+            'catatan' => 'nullable|string',
+            'items' => 'required|array|min:1',
+            'items.*.menu_id' => 'required|exists:menu,id',
+            'items.*.jumlah' => 'required|integer|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'sukses' => false,
+                'pesan' => 'Validasi gagal',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            // Cek stok untuk semua menu
+            $total = 0;
+            $detailItems = [];
+            
+            foreach ($request->items as $item) {
+                $menu = Menu::with('komposisiMenu.bahanBaku')->find($item['menu_id']);
+                
+                if (!$menu) {
+                    throw new \Exception("Menu dengan ID {$item['menu_id']} tidak ditemukan");
+                }
+
+                if (!$menu->tersedia) {
+                    throw new \Exception("Menu {$menu->nama} tidak tersedia");
+                }
+
+                // Cek stok bahan untuk menu ini
+                foreach ($menu->komposisiMenu as $komposisi) {
+                    $jumlahDibutuhkan = $komposisi->jumlah * $item['jumlah'];
+                    $bahanBaku = $komposisi->bahanBaku;
+                    
+                    if ($bahanBaku->stok_tersedia < $jumlahDibutuhkan) {
+                        throw new \Exception(
+                            "Stok {$bahanBaku->nama} tidak mencukupi. " .
+                            "Dibutuhkan: {$jumlahDibutuhkan} {$komposisi->satuan}, " .
+                            "Tersedia: {$bahanBaku->stok_tersedia} {$bahanBaku->satuan_dasar}"
+                        );
+                    }
+                }
+
+                $subtotal = $menu->harga_jual * $item['jumlah'];
+                $total += $subtotal;
+
+                $detailItems[] = [
+                    'menu' => $menu,
+                    'jumlah' => $item['jumlah'],
+                    'harga_satuan' => $menu->harga_jual,
+                    'subtotal' => $subtotal
+                ];
+            }
+
+            // Validasi pembayaran
+            if ($request->bayar < $total) {
+                throw new \Exception("Pembayaran kurang. Total: Rp " . number_format($total, 0, ',', '.'));
+            }
+
+            $kembalian = $request->bayar - $total;
+
+            // Buat transaksi
+            $transaksi = Transaksi::create([
+                'nomor_transaksi' => Transaksi::generateNomorTransaksi(),
+                'user_id' => $request->user_id,
+                'total' => $total,
+                'bayar' => $request->bayar,
+                'kembalian' => $kembalian,
+                'status' => 'selesai',
+                'catatan' => $request->catatan
+            ]);
+
+            // Simpan detail transaksi dan kurangi stok
+            foreach ($detailItems as $detail) {
+                DetailTransaksi::create([
+                    'transaksi_id' => $transaksi->id,
+                    'menu_id' => $detail['menu']->id,
+                    'jumlah' => $detail['jumlah'],
+                    'harga_satuan' => $detail['harga_satuan'],
+                    'subtotal' => $detail['subtotal']
+                ]);
+
+                // Kurangi stok bahan baku
+                foreach ($detail['menu']->komposisiMenu as $komposisi) {
+                    $bahanBaku = $komposisi->bahanBaku;
+                    $jumlahDigunakan = $komposisi->jumlah * $detail['jumlah'];
+                    $stokSebelum = $bahanBaku->stok_tersedia;
+                    $stokSesudah = $stokSebelum - $jumlahDigunakan;
+
+                    $bahanBaku->update(['stok_tersedia' => $stokSesudah]);
+
+                    // Catat log stok
+                    StokLog::create([
+                        'bahan_baku_id' => $bahanBaku->id,
+                        'user_id' => $request->user_id,
+                        'tipe' => 'keluar',
+                        'jumlah' => $jumlahDigunakan,
+                        'stok_sebelum' => $stokSebelum,
+                        'stok_sesudah' => $stokSesudah,
+                        'referensi' => $transaksi->nomor_transaksi,
+                        'keterangan' => "Pemakaian untuk menu {$detail['menu']->nama}"
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            $transaksi->load(['user', 'detailTransaksi.menu']);
+
+            return response()->json([
+                'sukses' => true,
+                'pesan' => 'Transaksi berhasil dibuat',
+                'data' => new TransaksiResource($transaksi)
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return response()->json([
+                'sukses' => false,
+                'pesan' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    /**
+     * Menampilkan detail transaksi
+     */
+    public function show($id)
+    {
+        $transaksi = Transaksi::with(['user', 'detailTransaksi.menu'])->find($id);
+
+        if (!$transaksi) {
+            return response()->json([
+                'sukses' => false,
+                'pesan' => 'Transaksi tidak ditemukan'
+            ], 404);
+        }
+
+        return response()->json([
+            'sukses' => true,
+            'pesan' => 'Berhasil mengambil detail transaksi',
+            'data' => new TransaksiResource($transaksi)
+        ]);
+    }
+
+    /**
+     * Membatalkan transaksi
+     */
+    public function batal($id)
+    {
+        DB::beginTransaction();
+
+        try {
+            $transaksi = Transaksi::with('detailTransaksi.menu.komposisiMenu.bahanBaku')->find($id);
+
+            if (!$transaksi) {
+                throw new \Exception('Transaksi tidak ditemukan');
+            }
+
+            if ($transaksi->status === 'dibatalkan') {
+                throw new \Exception('Transaksi sudah dibatalkan sebelumnya');
+            }
+
+            // Kembalikan stok
+            foreach ($transaksi->detailTransaksi as $detail) {
+                foreach ($detail->menu->komposisiMenu as $komposisi) {
+                    $bahanBaku = $komposisi->bahanBaku;
+                    $jumlahDikembalikan = $komposisi->jumlah * $detail->jumlah;
+                    $stokSebelum = $bahanBaku->stok_tersedia;
+                    $stokSesudah = $stokSebelum + $jumlahDikembalikan;
+
+                    $bahanBaku->update(['stok_tersedia' => $stokSesudah]);
+
+                    // Catat log stok
+                    StokLog::create([
+                        'bahan_baku_id' => $bahanBaku->id,
+                        'user_id' => $transaksi->user_id,
+                        'tipe' => 'masuk',
+                        'jumlah' => $jumlahDikembalikan,
+                        'stok_sebelum' => $stokSebelum,
+                        'stok_sesudah' => $stokSesudah,
+                        'referensi' => $transaksi->nomor_transaksi,
+                        'keterangan' => "Pengembalian stok dari pembatalan transaksi"
+                    ]);
+                }
+            }
+
+            $transaksi->update(['status' => 'dibatalkan']);
+
+            DB::commit();
+
+            return response()->json([
+                'sukses' => true,
+                'pesan' => 'Transaksi berhasil dibatalkan dan stok dikembalikan',
+                'data' => new TransaksiResource($transaksi)
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return response()->json([
+                'sukses' => false,
+                'pesan' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    /**
+     * Update tidak digunakan untuk transaksi (hanya batal)
+     */
+    public function update(Request $request, $id)
+    {
+        return response()->json([
+            'sukses' => false,
+            'pesan' => 'Transaksi tidak dapat diupdate. Gunakan endpoint batal untuk membatalkan transaksi.'
+        ], 405);
+    }
+
+    /**
+     * Hapus tidak digunakan untuk transaksi (hanya batal)
+     */
+    public function destroy($id)
+    {
+        return response()->json([
+            'sukses' => false,
+            'pesan' => 'Transaksi tidak dapat dihapus. Gunakan endpoint batal untuk membatalkan transaksi.'
+        ], 405);
+    }
+}

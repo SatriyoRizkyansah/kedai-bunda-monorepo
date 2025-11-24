@@ -1,0 +1,84 @@
+Deskripsi Proses Sistem — Kedai Bunda
+
+1. Input Stok Bahan Baku
+Admin memasukkan stok awal bahan baku seperti ayam, nasi, es, bumbu, dan bahan lainnya.
+
+2. Menentukan Konversi Bahan Baku
+Setiap bahan memiliki konversi unit ke porsi.
+Contoh:
+
+1 ekor ayam = 8 potong
+
+1 liter nasi = 12 porsi
+
+1 balok es = 20 gelas
+
+Konversi ini digunakan untuk menghitung stok otomatis setiap kali menu terjual.
+
+3. Membuat Menu
+Admin mendefinisikan daftar menu seperti:
+
+Ayam goreng
+
+Ayam rica-rica
+
+Nasi ayam
+
+Es teh
+
+Es jeruk
+
+4. Mengatur Kebutuhan Bahan per Menu
+Setiap menu memiliki daftar bahan yang dibutuhkan dan jumlahnya.
+Contoh:
+
+Menu “Nasi Ayam” → membutuhkan 1 porsi nasi + 1 potong ayam
+
+Menu “Ayam Goreng” → membutuhkan 1 potong ayam
+
+Menu “Es Teh” → membutuhkan 1 gelas es + 1 takaran teh
+
+5. Kasir Melakukan Transaksi
+Kasir memilih menu yang dipesan pelanggan di aplikasi kasir.
+
+6. Sistem Mengecek Ketersediaan Stok Bahan
+Sebelum transaksi disimpan, sistem akan memeriksa apakah stok bahan mencukupi berdasarkan komposisi menu.
+
+Jika stok tidak cukup → sistem memberi peringatan dan transaksi tidak dapat diproses.
+
+7. Pengurangan Stok Otomatis
+Jika stok cukup, maka setelah transaksi disimpan:
+
+stok bahan dikurangi secara otomatis sesuai jumlah bahan yang digunakan oleh menu tersebut.
+
+8. Pencatatan Penjualan
+Sistem mencatat detail transaksi:
+
+menu yang terjual
+
+jumlah
+
+tanggal dan waktu
+
+total pemakaian bahan
+
+9. Pembuatan Laporan
+Sistem menghasilkan laporan berdasarkan periode:
+
+laporan harian
+
+laporan mingguan
+
+laporan bulanan
+
+Laporan mencakup:
+
+menu yang paling banyak terjual
+
+bahan baku yang paling banyak dipakai
+
+sisa stok
+
+total pemakaian bahan per periode
+
+10. Admin dapat memantau stok dan permintaan restock berdasarkan data laporan
