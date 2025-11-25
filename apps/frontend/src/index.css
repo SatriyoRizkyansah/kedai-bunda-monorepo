@@ -51,4 +51,22 @@
       opacity: 1;
     }
   }
+
+  /* Prevent navbar flash/re-render visual effect */
+  header {
+    will-change: contents;
+    contain: layout style;
+  }
+
+  /* Smooth button transitions in navbar */
+  nav button,
+  nav a {
+    transition: all 0.15s ease-in-out;
+  }
+
+  /* Prevent repaint during navigation */
+  .container {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
 }
