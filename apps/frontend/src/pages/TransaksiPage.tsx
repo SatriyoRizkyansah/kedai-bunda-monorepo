@@ -430,7 +430,7 @@ export function TransaksiPage() {
                         <option value="">Pilih Menu</option>
                         {menuList.map((menu) => (
                           <option key={menu.id} value={menu.id}>
-                            {menu.nama} - Rp {menu.harga.toLocaleString("id-ID")}
+                            {menu.nama} - Rp {(menu.harga ?? 0).toLocaleString("id-ID")}
                           </option>
                         ))}
                       </select>

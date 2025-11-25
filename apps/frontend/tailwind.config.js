@@ -60,54 +60,32 @@ export default {
           from: { opacity: "1" },
           to: { opacity: "0" },
         },
-        "scale-in": {
+        "dialog-in": {
           from: {
-            transform: "scale(0.95)",
             opacity: "0",
+            transform: "translate(-50%, -48%) scale(0.96)",
           },
           to: {
-            transform: "scale(1)",
             opacity: "1",
+            transform: "translate(-50%, -50%) scale(1)",
           },
         },
-        "scale-out": {
+        "dialog-out": {
           from: {
-            transform: "scale(1)",
             opacity: "1",
+            transform: "translate(-50%, -50%) scale(1)",
           },
           to: {
-            transform: "scale(0.95)",
             opacity: "0",
-          },
-        },
-        "slide-up": {
-          from: {
-            transform: "translateY(10px)",
-            opacity: "0",
-          },
-          to: {
-            transform: "translateY(0)",
-            opacity: "1",
-          },
-        },
-        "slide-down": {
-          from: {
-            transform: "translateY(0)",
-            opacity: "1",
-          },
-          to: {
-            transform: "translateY(10px)",
-            opacity: "0",
+            transform: "translate(-50%, -48%) scale(0.96)",
           },
         },
       },
       animation: {
-        "fade-in": "fade-in 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)",
-        "fade-out": "fade-out 0.2s cubic-bezier(0.4, 0.0, 0.2, 1)",
-        "scale-in": "scale-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
-        "scale-out": "scale-out 0.2s cubic-bezier(0.4, 0.0, 0.2, 1)",
-        "slide-up": "slide-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
-        "slide-down": "slide-down 0.2s cubic-bezier(0.4, 0.0, 0.2, 1)",
+        "fade-in": "fade-in 0.2s ease-out",
+        "fade-out": "fade-out 0.15s ease-in",
+        "dialog-in": "dialog-in 0.2s ease-out",
+        "dialog-out": "dialog-out 0.15s ease-in",
       },
     },
   },

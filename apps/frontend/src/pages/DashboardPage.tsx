@@ -32,8 +32,8 @@ export function DashboardPage() {
 
   // Hitung transaksi hari ini
   const today = new Date().toISOString().split("T")[0];
-  const transaksiHariIni = transaksi.filter((t) => t.tanggal.startsWith(today));
-  const pendapatanHariIni = transaksiHariIni.filter((t) => t.status === "selesai").reduce((sum, t) => sum + Number(t.total), 0);
+  const transaksiHariIni = transaksi.filter((t) => t.tanggal && t.tanggal.startsWith(today));
+  const pendapatanHariIni = transaksiHariIni.filter((t) => t.status === "selesai").reduce((sum, t) => sum + Number(t.total || 0), 0);
 
   // Cek bahan baku yang stoknya menipis (threshold: < 10)
   const bahanStokMenipis = bahanBaku.filter((b) => Number(b.stok_tersedia || 0) < 10);
