@@ -41,7 +41,7 @@ export function DashboardPage() {
   if (loading) {
     return (
       <DashboardLayout>
-        <LoadingScreen message="Memuat data dashboard..." size="lg" />
+        <LoadingScreen message="L O A D I N G G G G . . . . . . . " size="lg" />
       </DashboardLayout>
     );
   }

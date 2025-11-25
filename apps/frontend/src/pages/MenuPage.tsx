@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
@@ -14,6 +15,15 @@ export function MenuPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedKategori, setSelectedKategori] = useState<string>("semua");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<Menu | null>(null);
+  const [formData, setFormData] = useState({
+    nama: "",
+    kategori: "makanan",
+    harga: "",
+    deskripsi: "",
+    tersedia: true,
+  });
 
   useEffect(() => {
     fetchMenu();
@@ -50,6 +60,61 @@ export function MenuPage() {
     }
   };
 
+  const handleOpenDialog = (item?: Menu) => {
+    if (item) {
+      setEditingItem(item);
+      setFormData({
+        nama: item.nama,
+        kategori: item.kategori,
+        harga: item.harga.toString(),
+        deskripsi: item.deskripsi || "",
+        tersedia: item.tersedia,
+      });
+    } else {
+      setEditingItem(null);
+      setFormData({
+        nama: "",
+        kategori: "makanan",
+        harga: "0",
+        deskripsi: "",
+        tersedia: true,
+      });
+    }
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setEditingItem(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const payload = {
+      nama: formData.nama,
+      kategori: formData.kategori,
+      harga: parseFloat(formData.harga),
+      deskripsi: formData.deskripsi,
+      tersedia: formData.tersedia,
+    };
+
+    try {
+      if (editingItem) {
+        await api.put(`/menu/${editingItem.id}`, payload);
+        alert("Menu berhasil diupdate");
+      } else {
+        await api.post("/menu", payload);
+        alert("Menu berhasil ditambahkan");
+      }
+      handleCloseDialog();
+      fetchMenu();
+    } catch (error: any) {
+      console.error("Error saving:", error);
+      alert(error.response?.data?.pesan || "Gagal menyimpan data");
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -60,6 +125,7 @@ export function MenuPage() {
             <p className="text-muted-foreground mt-2">Kelola menu makanan dan minuman</p>
           </div>
           <Button
+            onClick={() => handleOpenDialog()}
             className="gap-2"
             style={{
               boxShadow: "var(--shadow-md)",
@@ -151,7 +217,7 @@ export function MenuPage() {
                   <div className="flex justify-between items-center pt-3 border-t border-border">
                     <p className="text-2xl font-bold text-primary">Rp {Number(item.harga || 0).toLocaleString("id-ID")}</p>
                     <div className="flex gap-2">
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary">
+                      <Button onClick={() => handleOpenDialog(item)} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary">
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(item.id)}>
@@ -164,6 +230,66 @@ export function MenuPage() {
             ))}
           </div>
         )}
+
+        {/* Dialog Form */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>{editingItem ? "Edit Menu" : "Tambah Menu"}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit}>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <label htmlFor="nama" className="text-sm font-medium">
+                    Nama Menu <span className="text-destructive">*</span>
+                  </label>
+                  <Input id="nama" value={formData.nama} onChange={(e) => setFormData({ ...formData, nama: e.target.value })} placeholder="Contoh: Nasi Goreng Spesial" required />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <label htmlFor="kategori" className="text-sm font-medium">
+                      Kategori <span className="text-destructive">*</span>
+                    </label>
+                    <select
+                      id="kategori"
+                      value={formData.kategori}
+                      onChange={(e) => setFormData({ ...formData, kategori: e.target.value })}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      required
+                    >
+                      <option value="makanan">Makanan</option>
+                      <option value="minuman">Minuman</option>
+                    </select>
+                  </div>
+                  <div className="grid gap-2">
+                    <label htmlFor="harga" className="text-sm font-medium">
+                      Harga <span className="text-destructive">*</span>
+                    </label>
+                    <Input id="harga" type="number" step="0.01" min="0" value={formData.harga} onChange={(e) => setFormData({ ...formData, harga: e.target.value })} required />
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <label htmlFor="deskripsi" className="text-sm font-medium">
+                    Deskripsi
+                  </label>
+                  <Input id="deskripsi" value={formData.deskripsi} onChange={(e) => setFormData({ ...formData, deskripsi: e.target.value })} placeholder="Deskripsi menu (opsional)" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" id="tersedia" checked={formData.tersedia} onChange={(e) => setFormData({ ...formData, tersedia: e.target.checked })} className="h-4 w-4" />
+                  <label htmlFor="tersedia" className="text-sm font-medium">
+                    Tersedia
+                  </label>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                  Batal
+                </Button>
+                <Button type="submit">{editingItem ? "Update" : "Simpan"}</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

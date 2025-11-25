@@ -149,6 +149,65 @@ class DashboardController extends Controller
     }
 
     /**
+     * @OA\Get(
+     *     path="/api/dashboard/laporan-penjualan",
+     *     summary="Laporan penjualan berdasarkan periode",
+     *     tags={"Dashboard"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="tanggal_mulai",
+     *         in="query",
+     *         description="Tanggal mulai periode (YYYY-MM-DD)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date", example="2025-01-01")
+     *     ),
+     *     @OA\Parameter(
+     *         name="tanggal_selesai",
+     *         in="query",
+     *         description="Tanggal selesai periode (YYYY-MM-DD)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date", example="2025-01-31")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Laporan penjualan berhasil diambil",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="sukses", type="boolean", example=true),
+     *             @OA\Property(property="pesan", type="string", example="Berhasil mengambil laporan penjualan"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="periode",
+     *                     type="object",
+     *                     @OA\Property(property="mulai", type="string", example="2025-01-01"),
+     *                     @OA\Property(property="selesai", type="string", example="2025-01-31")
+     *                 ),
+     *                 @OA\Property(
+     *                     property="ringkasan",
+     *                     type="object",
+     *                     @OA\Property(property="total_transaksi", type="integer", example=350),
+     *                     @OA\Property(property="total_pendapatan", type="number", format="float", example=17500000),
+     *                     @OA\Property(property="total_bayar", type="number", format="float", example=18000000),
+     *                     @OA\Property(property="total_kembalian", type="number", format="float", example=500000),
+     *                     @OA\Property(property="rata_rata_per_transaksi", type="number", format="float", example=50000)
+     *                 ),
+     *                 @OA\Property(
+     *                     property="per_kategori",
+     *                     type="array",
+     *                     @OA\Items(
+     *                         @OA\Property(property="kategori", type="string", example="makanan"),
+     *                         @OA\Property(property="jumlah_transaksi", type="integer", example=200),
+     *                         @OA\Property(property="total_item", type="integer", example=450),
+     *                         @OA\Property(property="total_pendapatan", type="number", format="float", example=12000000)
+     *                     )
+     *                 ),
+     *                 @OA\Property(property="transaksi", type="array", @OA\Items(type="object"))
+     *             )
+     *         )
+     *     )
+     * )
+     *
      * Laporan penjualan berdasarkan periode
      */
     public function laporanPenjualan(Request $request)
@@ -210,6 +269,47 @@ class DashboardController extends Controller
     }
     
     /**
+     * @OA\Get(
+     *     path="/api/dashboard/laporan-stok",
+     *     summary="Laporan stok bahan baku",
+     *     tags={"Dashboard"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Laporan stok berhasil diambil",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="sukses", type="boolean", example=true),
+     *             @OA\Property(property="pesan", type="string", example="Berhasil mengambil laporan stok"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="ringkasan",
+     *                     type="object",
+     *                     @OA\Property(property="total_bahan_baku", type="integer", example=25),
+     *                     @OA\Property(property="stok_aman", type="integer", example=15),
+     *                     @OA\Property(property="stok_menipis", type="integer", example=7),
+     *                     @OA\Property(property="stok_habis", type="integer", example=3),
+     *                     @OA\Property(property="total_nilai_stok", type="number", format="float", example=5000000)
+     *                 ),
+     *                 @OA\Property(
+     *                     property="bahan_baku",
+     *                     type="array",
+     *                     @OA\Items(
+     *                         @OA\Property(property="id", type="integer", example=1),
+     *                         @OA\Property(property="nama", type="string", example="Tepung Terigu"),
+     *                         @OA\Property(property="satuan_dasar", type="string", example="kg"),
+     *                         @OA\Property(property="stok_tersedia", type="number", format="float", example=50.5),
+     *                         @OA\Property(property="harga_per_satuan", type="number", format="float", example=15000),
+     *                         @OA\Property(property="keterangan", type="string", example="Tepung terigu protein tinggi"),
+     *                         @OA\Property(property="aktif", type="boolean", example=true)
+     *                     )
+     *                 )
+     *             )
+     *         )
+     *     )
+     * )
+     *
      * Laporan stok bahan baku
      */
     public function laporanStok()

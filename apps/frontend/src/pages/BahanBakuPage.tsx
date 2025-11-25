@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
@@ -14,6 +15,16 @@ export function BahanBakuPage() {
   const [bahanBaku, setBahanBaku] = useState<BahanBaku[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<BahanBaku | null>(null);
+  const [formData, setFormData] = useState({
+    nama: "",
+    satuan_dasar: "",
+    stok_tersedia: "",
+    harga_per_satuan: "",
+    keterangan: "",
+    aktif: true,
+  });
 
   useEffect(() => {
     fetchBahanBaku();
@@ -38,6 +49,72 @@ export function BahanBakuPage() {
   const isLowStock = (item: BahanBaku) => {
     // Since we don't have stok_minimum in backend, use a threshold
     return Number(item.stok_tersedia || 0) < 10;
+  };
+
+  const handleOpenDialog = (item?: BahanBaku) => {
+    if (item) {
+      setEditingItem(item);
+      setFormData({
+        nama: item.nama,
+        satuan_dasar: item.satuan_dasar,
+        stok_tersedia: item.stok_tersedia.toString(),
+        harga_per_satuan: item.harga_per_satuan.toString(),
+        keterangan: item.keterangan || "",
+        aktif: item.aktif,
+      });
+    } else {
+      setEditingItem(null);
+      setFormData({
+        nama: "",
+        satuan_dasar: "",
+        stok_tersedia: "0",
+        harga_per_satuan: "0",
+        keterangan: "",
+        aktif: true,
+      });
+    }
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setEditingItem(null);
+    setFormData({
+      nama: "",
+      satuan_dasar: "",
+      stok_tersedia: "0",
+      harga_per_satuan: "0",
+      keterangan: "",
+      aktif: true,
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const payload = {
+      nama: formData.nama,
+      satuan_dasar: formData.satuan_dasar,
+      stok_tersedia: parseFloat(formData.stok_tersedia),
+      harga_per_satuan: parseFloat(formData.harga_per_satuan),
+      keterangan: formData.keterangan,
+      aktif: formData.aktif,
+    };
+
+    try {
+      if (editingItem) {
+        await api.put(`/bahan-baku/${editingItem.id}`, payload);
+        alert("Bahan baku berhasil diupdate");
+      } else {
+        await api.post("/bahan-baku", payload);
+        alert("Bahan baku berhasil ditambahkan");
+      }
+      handleCloseDialog();
+      fetchBahanBaku();
+    } catch (error: any) {
+      console.error("Error saving:", error);
+      alert(error.response?.data?.pesan || "Gagal menyimpan data");
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -66,6 +143,7 @@ export function BahanBakuPage() {
             </p>
           </div>
           <Button
+            onClick={() => handleOpenDialog()}
             className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
             style={{
               boxShadow: "var(--shadow-md)",
@@ -182,6 +260,7 @@ export function BahanBakuPage() {
                         <TableCell>
                           <div className="flex justify-center gap-2">
                             <Button
+                              onClick={() => handleOpenDialog(item)}
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary"
@@ -212,6 +291,57 @@ export function BahanBakuPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Dialog Form */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>{editingItem ? "Edit Bahan Baku" : "Tambah Bahan Baku"}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit}>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <label htmlFor="nama" className="text-sm font-medium">
+                    Nama Bahan <span className="text-destructive">*</span>
+                  </label>
+                  <Input id="nama" value={formData.nama} onChange={(e) => setFormData({ ...formData, nama: e.target.value })} placeholder="Contoh: Ayam Potong" required />
+                </div>
+                <div className="grid gap-2">
+                  <label htmlFor="satuan_dasar" className="text-sm font-medium">
+                    Satuan Dasar <span className="text-destructive">*</span>
+                  </label>
+                  <Input id="satuan_dasar" value={formData.satuan_dasar} onChange={(e) => setFormData({ ...formData, satuan_dasar: e.target.value })} placeholder="Contoh: ekor, kg, liter" required />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <label htmlFor="stok_tersedia" className="text-sm font-medium">
+                      Stok Tersedia <span className="text-destructive">*</span>
+                    </label>
+                    <Input id="stok_tersedia" type="number" step="0.01" min="0" value={formData.stok_tersedia} onChange={(e) => setFormData({ ...formData, stok_tersedia: e.target.value })} required />
+                  </div>
+                  <div className="grid gap-2">
+                    <label htmlFor="harga_per_satuan" className="text-sm font-medium">
+                      Harga/Satuan <span className="text-destructive">*</span>
+                    </label>
+                    <Input id="harga_per_satuan" type="number" step="0.01" min="0" value={formData.harga_per_satuan} onChange={(e) => setFormData({ ...formData, harga_per_satuan: e.target.value })} required />
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <label htmlFor="keterangan" className="text-sm font-medium">
+                    Keterangan
+                  </label>
+                  <Input id="keterangan" value={formData.keterangan} onChange={(e) => setFormData({ ...formData, keterangan: e.target.value })} placeholder="Keterangan tambahan (opsional)" />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                  Batal
+                </Button>
+                <Button type="submit">{editingItem ? "Update" : "Simpan"}</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

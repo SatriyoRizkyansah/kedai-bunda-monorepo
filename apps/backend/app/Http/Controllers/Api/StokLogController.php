@@ -11,6 +11,65 @@ use Illuminate\Support\Facades\Validator;
 class StokLogController extends Controller
 {
     /**
+     * @OA\Get(
+     *     path="/api/stok-log",
+     *     summary="Menampilkan riwayat stok",
+     *     tags={"Stok Log"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="bahan_baku_id",
+     *         in="query",
+     *         description="Filter berdasarkan ID bahan baku",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="tipe",
+     *         in="query",
+     *         description="Filter berdasarkan tipe (masuk/keluar)",
+     *         required=false,
+     *         @OA\Schema(type="string", enum={"masuk", "keluar"}, example="masuk")
+     *     ),
+     *     @OA\Parameter(
+     *         name="tanggal_mulai",
+     *         in="query",
+     *         description="Filter tanggal mulai (YYYY-MM-DD)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date", example="2025-01-01")
+     *     ),
+     *     @OA\Parameter(
+     *         name="tanggal_selesai",
+     *         in="query",
+     *         description="Filter tanggal selesai (YYYY-MM-DD)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date", example="2025-01-31")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Riwayat stok berhasil diambil",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="sukses", type="boolean", example=true),
+     *             @OA\Property(property="pesan", type="string", example="Berhasil mengambil riwayat stok"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="array",
+     *                 @OA\Items(
+     *                     @OA\Property(property="id", type="integer", example=1),
+     *                     @OA\Property(property="bahan_baku_id", type="integer", example=1),
+     *                     @OA\Property(property="user_id", type="integer", example=1),
+     *                     @OA\Property(property="tipe", type="string", example="masuk"),
+     *                     @OA\Property(property="jumlah", type="number", format="float", example=10.5),
+     *                     @OA\Property(property="stok_sebelum", type="number", format="float", example=20.0),
+     *                     @OA\Property(property="stok_sesudah", type="number", format="float", example=30.5),
+     *                     @OA\Property(property="referensi", type="string", example="RESTOK-20250125120000"),
+     *                     @OA\Property(property="keterangan", type="string", example="Penambahan stok manual"),
+     *                     @OA\Property(property="created_at", type="string", format="date-time")
+     *                 )
+     *             )
+     *         )
+     *     )
+     * )
+     *
      * Menampilkan riwayat stok
      */
     public function index(Request $request)
@@ -45,6 +104,41 @@ class StokLogController extends Controller
     }
 
     /**
+     * @OA\Post(
+     *     path="/api/stok-log/tambah",
+     *     summary="Menambah stok (pembelian/restok)",
+     *     tags={"Stok Log"},
+     *     security={{"sanctum":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         description="Data penambahan stok",
+     *         @OA\JsonContent(
+     *             required={"bahan_baku_id", "jumlah"},
+     *             @OA\Property(property="bahan_baku_id", type="integer", example=1),
+     *             @OA\Property(property="jumlah", type="number", format="float", example=10.5),
+     *             @OA\Property(property="keterangan", type="string", example="Pembelian dari supplier")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Stok berhasil ditambahkan",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="sukses", type="boolean", example=true),
+     *             @OA\Property(property="pesan", type="string", example="Stok berhasil ditambahkan"),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validasi gagal",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="sukses", type="boolean", example=false),
+     *             @OA\Property(property="pesan", type="string", example="Validasi gagal"),
+     *             @OA\Property(property="errors", type="object")
+     *         )
+     *     )
+     * )
+     *
      * Menambah stok (pembelian/restok)
      */
     public function tambahStok(Request $request)
@@ -88,6 +182,49 @@ class StokLogController extends Controller
     }
 
     /**
+     * @OA\Post(
+     *     path="/api/stok-log/kurangi",
+     *     summary="Mengurangi stok (penyesuaian/rusak/hilang)",
+     *     tags={"Stok Log"},
+     *     security={{"sanctum":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         description="Data pengurangan stok",
+     *         @OA\JsonContent(
+     *             required={"bahan_baku_id", "jumlah", "keterangan"},
+     *             @OA\Property(property="bahan_baku_id", type="integer", example=1),
+     *             @OA\Property(property="jumlah", type="number", format="float", example=2.5),
+     *             @OA\Property(property="keterangan", type="string", example="Bahan rusak/expired")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Stok berhasil dikurangi",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="sukses", type="boolean", example=true),
+     *             @OA\Property(property="pesan", type="string", example="Stok berhasil dikurangi"),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Stok tidak mencukupi",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="sukses", type="boolean", example=false),
+     *             @OA\Property(property="pesan", type="string", example="Stok tidak mencukupi untuk dikurangi")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validasi gagal",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="sukses", type="boolean", example=false),
+     *             @OA\Property(property="pesan", type="string", example="Validasi gagal"),
+     *             @OA\Property(property="errors", type="object")
+     *         )
+     *     )
+     * )
+     *
      * Mengurangi stok (penyesuaian/rusak/hilang)
      */
     public function kurangiStok(Request $request)

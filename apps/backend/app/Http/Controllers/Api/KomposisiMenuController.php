@@ -12,6 +12,46 @@ use Illuminate\Support\Facades\Validator;
 class KomposisiMenuController extends Controller
 {
     /**
+     * @OA\Get(
+     *     path="/api/komposisi-menu",
+     *     summary="Menampilkan daftar komposisi menu",
+     *     tags={"Komposisi Menu"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="menu_id",
+     *         in="query",
+     *         description="Filter berdasarkan ID menu",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="bahan_baku_id",
+     *         in="query",
+     *         description="Filter berdasarkan ID bahan baku",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Daftar komposisi menu berhasil diambil",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="sukses", type="boolean", example=true),
+     *             @OA\Property(property="pesan", type="string", example="Berhasil mengambil data komposisi menu"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="array",
+     *                 @OA\Items(
+     *                     @OA\Property(property="id", type="integer", example=1),
+     *                     @OA\Property(property="menu_id", type="integer", example=1),
+     *                     @OA\Property(property="bahan_baku_id", type="integer", example=1),
+     *                     @OA\Property(property="jumlah", type="number", format="float", example=0.2),
+     *                     @OA\Property(property="satuan", type="string", example="kg")
+     *                 )
+     *             )
+     *         )
+     *     )
+     * )
+     *
      * Menampilkan daftar komposisi menu
      */
     public function index(Request $request)
@@ -38,6 +78,50 @@ class KomposisiMenuController extends Controller
     }
 
     /**
+     * @OA\Post(
+     *     path="/api/komposisi-menu",
+     *     summary="Menyimpan komposisi menu baru",
+     *     tags={"Komposisi Menu"},
+     *     security={{"sanctum":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         description="Data komposisi menu baru",
+     *         @OA\JsonContent(
+     *             required={"menu_id", "bahan_baku_id", "jumlah", "satuan"},
+     *             @OA\Property(property="menu_id", type="integer", example=1),
+     *             @OA\Property(property="bahan_baku_id", type="integer", example=1),
+     *             @OA\Property(property="jumlah", type="number", format="float", example=0.2),
+     *             @OA\Property(property="satuan", type="string", example="kg")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Komposisi menu berhasil ditambahkan",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="sukses", type="boolean", example=true),
+     *             @OA\Property(property="pesan", type="string", example="Komposisi menu berhasil ditambahkan"),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Bahan sudah ada di komposisi",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="sukses", type="boolean", example=false),
+     *             @OA\Property(property="pesan", type="string", example="Bahan ini sudah ada di komposisi menu")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validasi gagal",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="sukses", type="boolean", example=false),
+     *             @OA\Property(property="pesan", type="string", example="Validasi gagal"),
+     *             @OA\Property(property="errors", type="object")
+     *         )
+     *     )
+     * )
+     *
      * Menyimpan komposisi menu baru
      */
     public function store(Request $request)
@@ -79,6 +163,53 @@ class KomposisiMenuController extends Controller
     }
 
     /**
+     * @OA\Post(
+     *     path="/api/komposisi-menu/multiple",
+     *     summary="Menyimpan multiple komposisi sekaligus untuk menu",
+     *     tags={"Komposisi Menu"},
+     *     security={{"sanctum":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         description="Data multiple komposisi menu",
+     *         @OA\JsonContent(
+     *             required={"menu_id", "komposisi"},
+     *             @OA\Property(property="menu_id", type="integer", example=1),
+     *             @OA\Property(
+     *                 property="komposisi",
+     *                 type="array",
+     *                 @OA\Items(
+     *                     @OA\Property(property="bahan_baku_id", type="integer", example=1),
+     *                     @OA\Property(property="jumlah", type="number", format="float", example=0.2),
+     *                     @OA\Property(property="satuan", type="string", example="kg")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Komposisi menu berhasil disimpan",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="sukses", type="boolean", example=true),
+     *             @OA\Property(property="pesan", type="string", example="Komposisi menu berhasil disimpan"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="menu", type="object"),
+     *                 @OA\Property(property="komposisi", type="array", @OA\Items(type="object"))
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validasi gagal",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="sukses", type="boolean", example=false),
+     *             @OA\Property(property="pesan", type="string", example="Validasi gagal"),
+     *             @OA\Property(property="errors", type="object")
+     *         )
+     *     )
+     * )
+     *
      * Menyimpan multiple komposisi sekaligus untuk menu
      */
     public function storeMultiple(Request $request)
@@ -128,6 +259,37 @@ class KomposisiMenuController extends Controller
     }
 
     /**
+     * @OA\Get(
+     *     path="/api/komposisi-menu/{id}",
+     *     summary="Menampilkan detail komposisi menu",
+     *     tags={"Komposisi Menu"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="ID Komposisi Menu",
+     *         required=true,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Detail komposisi menu berhasil diambil",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="sukses", type="boolean", example=true),
+     *             @OA\Property(property="pesan", type="string", example="Berhasil mengambil detail komposisi menu"),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Komposisi menu tidak ditemukan",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="sukses", type="boolean", example=false),
+     *             @OA\Property(property="pesan", type="string", example="Komposisi menu tidak ditemukan")
+     *         )
+     *     )
+     * )
+     *
      * Menampilkan detail komposisi menu
      */
     public function show($id)
@@ -149,6 +311,45 @@ class KomposisiMenuController extends Controller
     }
 
     /**
+     * @OA\Put(
+     *     path="/api/komposisi-menu/{id}",
+     *     summary="Mengupdate komposisi menu",
+     *     tags={"Komposisi Menu"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="ID Komposisi Menu",
+     *         required=true,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=false,
+     *         description="Data komposisi menu yang ingin diupdate",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="jumlah", type="number", format="float", example=0.3),
+     *             @OA\Property(property="satuan", type="string", example="kg")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Komposisi menu berhasil diupdate",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="sukses", type="boolean", example=true),
+     *             @OA\Property(property="pesan", type="string", example="Komposisi menu berhasil diupdate"),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Komposisi menu tidak ditemukan"
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validasi gagal"
+     *     )
+     * )
+     *
      * Mengupdate komposisi menu
      */
     public function update(Request $request, $id)
@@ -185,6 +386,32 @@ class KomposisiMenuController extends Controller
     }
 
     /**
+     * @OA\Delete(
+     *     path="/api/komposisi-menu/{id}",
+     *     summary="Menghapus komposisi menu",
+     *     tags={"Komposisi Menu"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="ID Komposisi Menu",
+     *         required=true,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Komposisi menu berhasil dihapus",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="sukses", type="boolean", example=true),
+     *             @OA\Property(property="pesan", type="string", example="Komposisi menu berhasil dihapus")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Komposisi menu tidak ditemukan"
+     *     )
+     * )
+     *
      * Menghapus komposisi menu
      */
     public function destroy($id)
@@ -207,6 +434,36 @@ class KomposisiMenuController extends Controller
     }
 
     /**
+     * @OA\Delete(
+     *     path="/api/komposisi-menu/menu/{menuId}",
+     *     summary="Menghapus semua komposisi untuk menu tertentu",
+     *     tags={"Komposisi Menu"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="menuId",
+     *         in="path",
+     *         description="ID Menu",
+     *         required=true,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Semua komposisi menu berhasil dihapus",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="sukses", type="boolean", example=true),
+     *             @OA\Property(property="pesan", type="string", example="Semua komposisi menu berhasil dihapus")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Menu tidak ditemukan",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="sukses", type="boolean", example=false),
+     *             @OA\Property(property="pesan", type="string", example="Menu tidak ditemukan")
+     *         )
+     *     )
+     * )
+     *
      * Menghapus semua komposisi untuk menu tertentu
      */
     public function destroyByMenu($menuId)

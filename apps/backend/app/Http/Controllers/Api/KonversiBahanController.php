@@ -121,6 +121,45 @@ class KonversiBahanController extends Controller
     }
 
     /**
+     * @OA\Get(
+     *     path="/api/konversi-bahan/{id}",
+     *     summary="Menampilkan detail konversi bahan",
+     *     tags={"Konversi Bahan"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="ID Konversi Bahan",
+     *         required=true,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Detail konversi bahan berhasil diambil",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="sukses", type="boolean", example=true),
+     *             @OA\Property(property="pesan", type="string", example="Berhasil mengambil detail konversi bahan"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="id", type="integer", example=1),
+     *                 @OA\Property(property="bahan_baku_id", type="integer", example=1),
+     *                 @OA\Property(property="satuan_konversi", type="string", example="potong"),
+     *                 @OA\Property(property="nilai_konversi", type="number", format="float", example=8),
+     *                 @OA\Property(property="keterangan", type="string", example="1 ekor = 8 potong")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Konversi bahan tidak ditemukan",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="sukses", type="boolean", example=false),
+     *             @OA\Property(property="pesan", type="string", example="Konversi bahan tidak ditemukan")
+     *         )
+     *     )
+     * )
+     *
      * Menampilkan detail konversi bahan
      */
     public function show($id)
@@ -142,6 +181,55 @@ class KonversiBahanController extends Controller
     }
 
     /**
+     * @OA\Put(
+     *     path="/api/konversi-bahan/{id}",
+     *     summary="Mengupdate konversi bahan",
+     *     tags={"Konversi Bahan"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="ID Konversi Bahan",
+     *         required=true,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=false,
+     *         description="Data konversi bahan yang ingin diupdate (semua field opsional)",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="satuan_konversi", type="string", example="potong"),
+     *             @OA\Property(property="nilai_konversi", type="number", format="float", example=10),
+     *             @OA\Property(property="keterangan", type="string", example="1 ekor = 10 potong kecil")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Konversi bahan berhasil diupdate",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="sukses", type="boolean", example=true),
+     *             @OA\Property(property="pesan", type="string", example="Konversi bahan berhasil diupdate"),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Konversi bahan tidak ditemukan",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="sukses", type="boolean", example=false),
+     *             @OA\Property(property="pesan", type="string", example="Konversi bahan tidak ditemukan")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validasi gagal",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="sukses", type="boolean", example=false),
+     *             @OA\Property(property="pesan", type="string", example="Validasi gagal"),
+     *             @OA\Property(property="errors", type="object")
+     *         )
+     *     )
+     * )
+     *
      * Mengupdate konversi bahan
      */
     public function update(Request $request, $id)
@@ -179,6 +267,36 @@ class KonversiBahanController extends Controller
     }
 
     /**
+     * @OA\Delete(
+     *     path="/api/konversi-bahan/{id}",
+     *     summary="Menghapus konversi bahan",
+     *     tags={"Konversi Bahan"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="ID Konversi Bahan",
+     *         required=true,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Konversi bahan berhasil dihapus",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="sukses", type="boolean", example=true),
+     *             @OA\Property(property="pesan", type="string", example="Konversi bahan berhasil dihapus")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Konversi bahan tidak ditemukan",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="sukses", type="boolean", example=false),
+     *             @OA\Property(property="pesan", type="string", example="Konversi bahan tidak ditemukan")
+     *         )
+     *     )
+     * )
+     *
      * Menghapus konversi bahan
      */
     public function destroy($id)
