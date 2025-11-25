@@ -34,6 +34,11 @@ export function BahanBakuPage() {
 
   const filteredBahanBaku = bahanBaku.filter((item) => item.nama.toLowerCase().includes(searchTerm.toLowerCase()));
 
+  const isLowStock = (item: BahanBaku) => {
+    // Since we don't have stok_minimum in backend, use a threshold
+    return Number(item.stok_tersedia || 0) < 10;
+  };
+
   const handleDelete = async (id: number) => {
     if (!confirm("Yakin ingin menghapus bahan baku ini?")) return;
 
@@ -133,8 +138,8 @@ export function BahanBakuPage() {
                   <TableRow>
                     <TableHead>Nama Bahan</TableHead>
                     <TableHead>Satuan</TableHead>
-                    <TableHead className="text-right">Stok</TableHead>
-                    <TableHead className="text-right">Stok Min</TableHead>
+                    <TableHead className="text-right">Stok Tersedia</TableHead>
+                    <TableHead className="text-right">Keterangan</TableHead>
                     <TableHead className="text-right">Harga/Satuan</TableHead>
                     <TableHead className="text-center">Status</TableHead>
                     <TableHead className="text-center">Aksi</TableHead>
@@ -142,18 +147,18 @@ export function BahanBakuPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredBahanBaku.map((item) => {
-                    const isLowStock = item.stok <= item.stok_minimum;
+                    const lowStock = isLowStock(item);
                     return (
                       <TableRow key={item.id}>
                         <TableCell className="font-medium text-foreground">{item.nama}</TableCell>
-                        <TableCell className="text-muted-foreground">{item.satuan}</TableCell>
+                        <TableCell className="text-muted-foreground">{item.satuan_dasar}</TableCell>
                         <TableCell className="text-right">
-                          <span className={`font-semibold ${isLowStock ? "text-destructive" : "text-foreground"}`}>{item.stok}</span>
+                          <span className={`font-semibold ${lowStock ? "text-destructive" : "text-foreground"}`}>{Number(item.stok_tersedia || 0).toFixed(2)}</span>
                         </TableCell>
-                        <TableCell className="text-right text-muted-foreground">{item.stok_minimum}</TableCell>
-                        <TableCell className="text-right font-medium">Rp {item.harga_satuan.toLocaleString("id-ID")}</TableCell>
+                        <TableCell className="text-right text-muted-foreground">{item.keterangan || "-"}</TableCell>
+                        <TableCell className="text-right font-medium">Rp {Number(item.harga_per_satuan || 0).toLocaleString("id-ID")}</TableCell>
                         <TableCell className="text-center">
-                          {isLowStock ? (
+                          {lowStock ? (
                             <Badge
                               variant="destructive"
                               className="gap-1"

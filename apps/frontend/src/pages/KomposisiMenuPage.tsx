@@ -187,7 +187,7 @@ export const KomposisiMenuPage = () => {
                         <TableRow key={item.id}>
                           <TableCell className="font-medium">{item.bahan_baku?.nama || "-"}</TableCell>
                           <TableCell>
-                            <Badge variant="secondary">{item.bahan_baku?.satuan || "-"}</Badge>
+                            <Badge variant="secondary">{item.bahan_baku?.satuan_dasar || "-"}</Badge>
                           </TableCell>
                           <TableCell>
                             <span className="font-mono font-semibold" style={{ color: "rgb(var(--primary))" }}>

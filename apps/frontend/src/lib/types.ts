@@ -11,15 +11,19 @@ export interface User {
 export interface BahanBaku {
   id: number;
   nama: string;
-  satuan: string;
-  stok: number;
-  stok_minimum: number;
-  harga_satuan: number;
-  created_at: string;
-  updated_at: string;
-}
-
-// Menu types
+  satuan_dasar: string;
+  stok_tersedia: number;
+  harga_per_satuan: number;
+  keterangan?: string;
+  aktif: boolean;
+  created_at?: string;
+  updated_at?: string;
+  // Legacy field names for backward compatibility
+  satuan?: string;
+  stok?: number;
+  stok_minimum?: number;
+  harga_satuan?: number;
+} // Menu types
 export interface Menu {
   id: number;
   nama: string;

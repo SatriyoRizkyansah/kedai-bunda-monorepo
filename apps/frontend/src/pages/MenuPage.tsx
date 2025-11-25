@@ -9,214 +9,163 @@ import type { Menu } from "@/lib/types";
 import { Plus, Search, Pencil, Trash2, UtensilsCrossed } from "lucide-react";
 
 export function MenuPage() {
-    const [menu, setMenu] = useState<Menu[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState("");
-    const [selectedKategori, setSelectedKategori] = useState<string>("semua");
+  const [menu, setMenu] = useState<Menu[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedKategori, setSelectedKategori] = useState<string>("semua");
 
-    useEffect(() => {
-        fetchMenu();
-    }, []);
+  useEffect(() => {
+    fetchMenu();
+  }, []);
 
-    const fetchMenu = async () => {
-        try {
-            const response = await api.get("/menu");
-            setMenu(response.data.data || []);
-        } catch (error) {
-            console.error("Error fetching menu:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
+  const fetchMenu = async () => {
+    try {
+      const response = await api.get("/menu");
+      setMenu(response.data.data || []);
+    } catch (error) {
+      console.error("Error fetching menu:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const kategoris = [
-        "semua",
-        ...Array.from(new Set(menu.map((m) => m.kategori))),
-    ];
+  const kategoris = ["semua", ...Array.from(new Set(menu.map((m) => m.kategori)))];
 
-    const filteredMenu = menu.filter((item) => {
-        const matchSearch = item.nama
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase());
-        const matchKategori =
-            selectedKategori === "semua" || item.kategori === selectedKategori;
-        return matchSearch && matchKategori;
-    });
+  const filteredMenu = menu.filter((item) => {
+    const matchSearch = item.nama.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchKategori = selectedKategori === "semua" || item.kategori === selectedKategori;
+    return matchSearch && matchKategori;
+  });
 
-    const handleDelete = async (id: number) => {
-        if (!confirm("Yakin ingin menghapus menu ini?")) return;
+  const handleDelete = async (id: number) => {
+    if (!confirm("Yakin ingin menghapus menu ini?")) return;
 
-        try {
-            await api.delete(`/menu/${id}`);
-            fetchMenu();
-        } catch (error) {
-            console.error("Error deleting:", error);
-            alert("Gagal menghapus menu");
-        }
-    };
+    try {
+      await api.delete(`/menu/${id}`);
+      fetchMenu();
+    } catch (error) {
+      console.error("Error deleting:", error);
+      alert("Gagal menghapus menu");
+    }
+  };
 
-    return (
-        <DashboardLayout>
-            <div className="space-y-6">
-                {/* Header */}
-                <div className="flex justify-between items-center">
-                    <div>
-                        <h2 className="text-3xl font-bold text-foreground tracking-tight">
-                            Menu
-                        </h2>
-                        <p className="text-muted-foreground mt-2">
-                            Kelola menu makanan dan minuman
-                        </p>
-                    </div>
-                    <Button
-                        className="gap-2"
-                        style={{
-                            boxShadow: "var(--shadow-md)",
-                        }}
-                    >
-                        <Plus className="h-4 w-4" />
-                        Tambah Menu
-                    </Button>
-                </div>
+  return (
+    <DashboardLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-3xl font-bold text-foreground tracking-tight">Menu</h2>
+            <p className="text-muted-foreground mt-2">Kelola menu makanan dan minuman</p>
+          </div>
+          <Button
+            className="gap-2"
+            style={{
+              boxShadow: "var(--shadow-md)",
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            Tambah Menu
+          </Button>
+        </div>
 
-                {/* Filters */}
-                <Card
+        {/* Filters */}
+        <Card
+          style={{
+            boxShadow: "var(--shadow-sm)",
+            borderRadius: "var(--radius)",
+          }}
+        >
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Cari menu..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                  style={{
+                    borderRadius: "calc(var(--radius) - 2px)",
+                  }}
+                />
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {kategoris.map((kat) => (
+                  <Button
+                    key={kat}
+                    variant={selectedKategori === kat ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSelectedKategori(kat)}
+                    className="capitalize"
                     style={{
-                        boxShadow: "var(--shadow-sm)",
-                        borderRadius: "var(--radius)",
+                      borderRadius: "calc(var(--radius) - 2px)",
                     }}
-                >
-                    <CardContent className="p-6">
-                        <div className="flex flex-col md:flex-row gap-4">
-                            <div className="relative flex-1">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Cari menu..."
-                                    value={searchTerm}
-                                    onChange={(e) =>
-                                        setSearchTerm(e.target.value)
-                                    }
-                                    className="pl-10"
-                                    style={{
-                                        borderRadius:
-                                            "calc(var(--radius) - 2px)",
-                                    }}
-                                />
-                            </div>
-                            <div className="flex gap-2 flex-wrap">
-                                {kategoris.map((kat) => (
-                                    <Button
-                                        key={kat}
-                                        variant={
-                                            selectedKategori === kat
-                                                ? "default"
-                                                : "outline"
-                                        }
-                                        size="sm"
-                                        onClick={() => setSelectedKategori(kat)}
-                                        className="capitalize"
-                                        style={{
-                                            borderRadius:
-                                                "calc(var(--radius) - 2px)",
-                                        }}
-                                    >
-                                        {kat}
-                                    </Button>
-                                ))}
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Menu Grid */}
-                {loading ? (
-                    <div className="text-center py-12">
-                        <p className="text-muted-foreground">Memuat data...</p>
-                    </div>
-                ) : filteredMenu.length === 0 ? (
-                    <div className="text-center py-12">
-                        <UtensilsCrossed className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <p className="text-muted-foreground">
-                            {searchTerm
-                                ? "Tidak ada hasil pencarian"
-                                : "Belum ada menu tersedia"}
-                        </p>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {filteredMenu.map((item) => (
-                            <Card
-                                key={item.id}
-                                className="hover:shadow-lg transition-all duration-300 border-border group"
-                                style={{
-                                    boxShadow: "var(--shadow-sm)",
-                                    borderRadius: "var(--radius)",
-                                }}
-                            >
-                                <CardHeader className="pb-3">
-                                    <div className="flex justify-between items-start gap-3">
-                                        <div className="flex-1">
-                                            <CardTitle className="text-xl text-foreground group-hover:text-primary transition-colors">
-                                                {item.nama}
-                                            </CardTitle>
-                                            <p className="text-sm text-muted-foreground capitalize mt-1">
-                                                {item.kategori}
-                                            </p>
-                                        </div>
-                                        <Badge
-                                            variant={
-                                                item.tersedia
-                                                    ? "success"
-                                                    : "destructive"
-                                            }
-                                            style={{
-                                                borderRadius:
-                                                    "calc(var(--radius) - 2px)",
-                                            }}
-                                        >
-                                            {item.tersedia
-                                                ? "Tersedia"
-                                                : "Habis"}
-                                        </Badge>
-                                    </div>
-                                </CardHeader>
-                                <CardContent>
-                                    {item.deskripsi && (
-                                        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                                            {item.deskripsi}
-                                        </p>
-                                    )}
-                                    <div className="flex justify-between items-center pt-3 border-t border-border">
-                                        <p className="text-2xl font-bold text-primary">
-                                            Rp{" "}
-                                            {item.harga.toLocaleString("id-ID")}
-                                        </p>
-                                        <div className="flex gap-2">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary"
-                                            >
-                                                <Pencil className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
-                                                onClick={() =>
-                                                    handleDelete(item.id)
-                                                }
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-                )}
+                  >
+                    {kat}
+                  </Button>
+                ))}
+              </div>
             </div>
-        </DashboardLayout>
-    );
+          </CardContent>
+        </Card>
+
+        {/* Menu Grid */}
+        {loading ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Memuat data...</p>
+          </div>
+        ) : filteredMenu.length === 0 ? (
+          <div className="text-center py-12">
+            <UtensilsCrossed className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">{searchTerm ? "Tidak ada hasil pencarian" : "Belum ada menu tersedia"}</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredMenu.map((item) => (
+              <Card
+                key={item.id}
+                className="hover:shadow-lg transition-all duration-300 border-border group"
+                style={{
+                  boxShadow: "var(--shadow-sm)",
+                  borderRadius: "var(--radius)",
+                }}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex justify-between items-start gap-3">
+                    <div className="flex-1">
+                      <CardTitle className="text-xl text-foreground group-hover:text-primary transition-colors">{item.nama}</CardTitle>
+                      <p className="text-sm text-muted-foreground capitalize mt-1">{item.kategori}</p>
+                    </div>
+                    <Badge
+                      variant={item.tersedia ? "success" : "destructive"}
+                      style={{
+                        borderRadius: "calc(var(--radius) - 2px)",
+                      }}
+                    >
+                      {item.tersedia ? "Tersedia" : "Habis"}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {item.deskripsi && <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{item.deskripsi}</p>}
+                  <div className="flex justify-between items-center pt-3 border-t border-border">
+                    <p className="text-2xl font-bold text-primary">Rp {Number(item.harga || 0).toLocaleString("id-ID")}</p>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(item.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    </DashboardLayout>
+  );
 }

@@ -34,8 +34,8 @@ export function DashboardPage() {
   const transaksiHariIni = transaksi.filter((t) => t.tanggal.startsWith(today));
   const pendapatanHariIni = transaksiHariIni.filter((t) => t.status === "selesai").reduce((sum, t) => sum + Number(t.total), 0);
 
-  // Cek bahan baku yang stoknya menipis
-  const bahanStokMenipis = bahanBaku.filter((b) => b.stok <= b.stok_minimum);
+  // Cek bahan baku yang stoknya menipis (threshold: < 10)
+  const bahanStokMenipis = bahanBaku.filter((b) => Number(b.stok_tersedia || 0) < 10);
 
   return (
     <DashboardLayout>
@@ -93,13 +93,11 @@ export function DashboardPage() {
                   >
                     <div>
                       <p className="font-semibold text-foreground">{bahan.nama}</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Stok minimum: {bahan.stok_minimum} {bahan.satuan}
-                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">Stok tersedia rendah (threshold: 10 {bahan.satuan_dasar})</p>
                     </div>
                     <div className="text-right">
                       <p className="text-xl font-bold text-destructive">
-                        {bahan.stok} {bahan.satuan}
+                        {Number(bahan.stok_tersedia || 0).toFixed(2)} {bahan.satuan_dasar}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">Tersisa</p>
                     </div>
