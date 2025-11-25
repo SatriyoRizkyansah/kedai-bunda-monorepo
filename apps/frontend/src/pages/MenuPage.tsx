@@ -66,7 +66,7 @@ export function MenuPage() {
       setFormData({
         nama: item.nama,
         kategori: item.kategori,
-        harga: item.harga.toString(),
+        harga: (item.harga_jual || item.harga || 0).toString(),
         deskripsi: item.deskripsi || "",
         tersedia: item.tersedia,
       });
@@ -94,7 +94,7 @@ export function MenuPage() {
     const payload = {
       nama: formData.nama,
       kategori: formData.kategori,
-      harga: parseFloat(formData.harga),
+      harga_jual: parseFloat(formData.harga),
       deskripsi: formData.deskripsi,
       tersedia: formData.tersedia,
     };
@@ -215,7 +215,7 @@ export function MenuPage() {
                 <CardContent>
                   {item.deskripsi && <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{item.deskripsi}</p>}
                   <div className="flex justify-between items-center pt-3 border-t border-border">
-                    <p className="text-2xl font-bold text-primary">Rp {Number(item.harga || 0).toLocaleString("id-ID")}</p>
+                    <p className="text-2xl font-bold text-primary">Rp {Number(item.harga_jual || item.harga || 0).toLocaleString("id-ID")}</p>
                     <div className="flex gap-2">
                       <Button onClick={() => handleOpenDialog(item)} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary">
                         <Pencil className="h-4 w-4" />

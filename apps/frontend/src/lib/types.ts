@@ -28,7 +28,9 @@ export interface Menu {
   id: number;
   nama: string;
   kategori: string;
-  harga: number;
+  harga_jual: number;
+  harga?: number; // alias untuk compatibility
+  gambar?: string | null;
   deskripsi: string | null;
   tersedia: boolean;
   created_at: string;

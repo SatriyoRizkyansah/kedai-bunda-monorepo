@@ -3,21 +3,36 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
-import type { Transaksi } from "@/lib/types";
-import { Plus, Search, Eye, XCircle, ShoppingCart, Calendar, DollarSign } from "lucide-react";
+import type { Transaksi, Menu } from "@/lib/types";
+import { Plus, Search, Eye, XCircle, ShoppingCart, Calendar, DollarSign, Trash2 } from "lucide-react";
+
+interface CartItem {
+  menu_id: number;
+  menu: Menu;
+  jumlah: number;
+}
 
 export function TransaksiPage() {
   const [transaksi, setTransaksi] = useState<Transaksi[]>([]);
+  const [menuList, setMenuList] = useState<Menu[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("semua");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [bayar, setBayar] = useState("");
+  const [catatan, setCatatan] = useState("");
+  const [selectedMenuId, setSelectedMenuId] = useState("");
+  const [jumlahItem, setJumlahItem] = useState("1");
 
   useEffect(() => {
     fetchTransaksi();
+    fetchMenu();
   }, []);
 
   const fetchTransaksi = async () => {
@@ -31,6 +46,113 @@ export function TransaksiPage() {
       alert("Gagal memuat data transaksi");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMenu = async () => {
+    try {
+      const response = await api.get("/menu?tersedia=1");
+      const menuData = response.data.data || [];
+
+      // Normalize menu data - add harga alias for harga_jual
+      const normalizedMenu = menuData.map((menu: any) => ({
+        ...menu,
+        harga: menu.harga_jual || menu.harga || 0,
+      }));
+
+      setMenuList(normalizedMenu);
+    } catch (error) {
+      console.error("Error fetching menu:", error);
+    }
+  };
+
+  const handleOpenDialog = () => {
+    setCart([]);
+    setBayar("");
+    setCatatan("");
+    setSelectedMenuId("");
+    setJumlahItem("1");
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+  };
+
+  const handleAddToCart = () => {
+    if (!selectedMenuId || !jumlahItem) return;
+
+    const menu = menuList.find((m) => m.id === parseInt(selectedMenuId));
+    if (!menu) return;
+
+    // Ensure harga field exists (already normalized in fetchMenu)
+    const normalizedMenu = {
+      ...menu,
+      harga: menu.harga || menu.harga_jual || 0,
+    };
+
+    const existingItem = cart.find((item) => item.menu_id === normalizedMenu.id);
+    if (existingItem) {
+      setCart(cart.map((item) => (item.menu_id === normalizedMenu.id ? { ...item, jumlah: item.jumlah + parseInt(jumlahItem) } : item)));
+    } else {
+      setCart([...cart, { menu_id: normalizedMenu.id, menu: normalizedMenu, jumlah: parseInt(jumlahItem) }]);
+    }
+
+    setSelectedMenuId("");
+    setJumlahItem("1");
+  };
+
+  const handleRemoveFromCart = (menuId: number) => {
+    setCart(cart.filter((item) => item.menu_id !== menuId));
+  };
+
+  const calculateTotal = () => {
+    return cart.reduce((sum, item) => sum + (item.menu?.harga || 0) * item.jumlah, 0);
+  };
+
+  const calculateKembalian = () => {
+    const total = calculateTotal();
+    const bayarNum = parseFloat(bayar) || 0;
+    return bayarNum - total;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (cart.length === 0) {
+      alert("Keranjang masih kosong!");
+      return;
+    }
+
+    const total = calculateTotal();
+    const bayarNum = parseFloat(bayar);
+
+    if (!bayarNum || bayarNum < total) {
+      alert("Pembayaran kurang!");
+      return;
+    }
+
+    try {
+      // Get current user ID from localStorage
+      const userStr = localStorage.getItem("user");
+      const user = userStr ? JSON.parse(userStr) : null;
+
+      await api.post("/transaksi", {
+        user_id: user?.id || 1,
+        bayar: bayarNum,
+        catatan: catatan,
+        items: cart.map((item) => ({
+          menu_id: item.menu_id,
+          jumlah: item.jumlah,
+        })),
+      });
+
+      handleCloseDialog();
+      fetchTransaksi();
+      alert("Transaksi berhasil!");
+    } catch (error: any) {
+      console.error("Error:", error);
+      alert(error.response?.data?.pesan || "Gagal menyimpan transaksi");
     }
   };
 
@@ -83,6 +205,7 @@ export function TransaksiPage() {
             </p>
           </div>
           <Button
+            onClick={handleOpenDialog}
             className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
             style={{
               boxShadow: "var(--shadow-md)",
@@ -288,6 +411,120 @@ export function TransaksiPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Dialog Transaksi Baru */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Transaksi Baru</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit}>
+              <div className="space-y-6 py-4">
+                {/* Pilih Menu */}
+                <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
+                  <h3 className="font-semibold">Tambah Item</h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="col-span-2 space-y-2">
+                      <label className="text-sm font-medium">Menu</label>
+                      <select value={selectedMenuId} onChange={(e) => setSelectedMenuId(e.target.value)} className="w-full px-3 py-2 rounded-md border border-input bg-background">
+                        <option value="">Pilih Menu</option>
+                        {menuList.map((menu) => (
+                          <option key={menu.id} value={menu.id}>
+                            {menu.nama} - Rp {menu.harga.toLocaleString("id-ID")}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Jumlah</label>
+                      <div className="flex gap-2">
+                        <Input type="number" min="1" value={jumlahItem} onChange={(e) => setJumlahItem(e.target.value)} className="w-20" />
+                        <Button type="button" onClick={handleAddToCart} disabled={!selectedMenuId} className="flex-1">
+                          <Plus className="h-4 w-4 mr-1" />
+                          Tambah
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Keranjang */}
+                <div className="space-y-2">
+                  <h3 className="font-semibold">Keranjang ({cart.length} item)</h3>
+                  {cart.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground border rounded-lg">Keranjang masih kosong</div>
+                  ) : (
+                    <div className="border rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Menu</TableHead>
+                            <TableHead className="text-center">Jumlah</TableHead>
+                            <TableHead className="text-right">Harga</TableHead>
+                            <TableHead className="text-right">Subtotal</TableHead>
+                            <TableHead className="w-16"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {cart.map((item) => (
+                            <TableRow key={item.menu_id}>
+                              <TableCell>{item.menu?.nama || "Unknown"}</TableCell>
+                              <TableCell className="text-center">{item.jumlah}</TableCell>
+                              <TableCell className="text-right">Rp {(item.menu?.harga || 0).toLocaleString("id-ID")}</TableCell>
+                              <TableCell className="text-right font-semibold">Rp {((item.menu?.harga || 0) * item.jumlah).toLocaleString("id-ID")}</TableCell>
+                              <TableCell>
+                                <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveFromCart(item.menu_id)}>
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          <TableRow>
+                            <TableCell colSpan={3} className="text-right font-bold">
+                              Total:
+                            </TableCell>
+                            <TableCell className="text-right font-bold text-lg">Rp {calculateTotal().toLocaleString("id-ID")}</TableCell>
+                            <TableCell></TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </div>
+
+                {/* Pembayaran */}
+                <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg bg-primary/5">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      Bayar <span className="text-destructive">*</span>
+                    </label>
+                    <Input type="number" value={bayar} onChange={(e) => setBayar(e.target.value)} placeholder="Masukkan jumlah bayar" required className="text-lg font-semibold" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Kembalian</label>
+                    <div className="text-2xl font-bold text-primary px-3 py-2 bg-background rounded-md border">Rp {calculateKembalian() > 0 ? calculateKembalian().toLocaleString("id-ID") : "0"}</div>
+                  </div>
+                </div>
+
+                {/* Catatan */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Catatan</label>
+                  <Input value={catatan} onChange={(e) => setCatatan(e.target.value)} placeholder="Catatan tambahan (opsional)" />
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                  Batal
+                </Button>
+                <Button type="submit" disabled={cart.length === 0}>
+                  <ShoppingCart className="h-4 w-4 mr-2" />
+                  Proses Transaksi
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

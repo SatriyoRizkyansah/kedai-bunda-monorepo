@@ -3,18 +3,30 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
-import type { KonversiBahan } from "@/lib/types";
+import type { KonversiBahan, BahanBaku } from "@/lib/types";
 import { Plus, Pencil, Trash2, ArrowRightLeft } from "lucide-react";
 
 export function KonversiBahanPage() {
   const [konversi, setKonversi] = useState<KonversiBahan[]>([]);
+  const [bahanBakuList, setBahanBakuList] = useState<BahanBaku[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<KonversiBahan | null>(null);
+  const [formData, setFormData] = useState({
+    bahan_baku_id: "",
+    satuan_konversi: "",
+    nilai_konversi: "",
+    keterangan: "",
+  });
 
   useEffect(() => {
     fetchKonversi();
+    fetchBahanBaku();
   }, []);
 
   const fetchKonversi = async () => {
@@ -28,6 +40,66 @@ export function KonversiBahanPage() {
       alert("Gagal memuat data konversi bahan");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchBahanBaku = async () => {
+    try {
+      const response = await api.get("/bahan-baku");
+      setBahanBakuList(response.data.data || []);
+    } catch (error) {
+      console.error("Error fetching bahan baku:", error);
+    }
+  };
+
+  const handleOpenDialog = (item?: KonversiBahan) => {
+    if (item) {
+      setEditingItem(item);
+      setFormData({
+        bahan_baku_id: item.bahan_baku_id.toString(),
+        satuan_konversi: item.satuan_konversi,
+        nilai_konversi: item.nilai_konversi.toString(),
+        keterangan: item.keterangan || "",
+      });
+    } else {
+      setEditingItem(null);
+      setFormData({
+        bahan_baku_id: "",
+        satuan_konversi: "",
+        nilai_konversi: "",
+        keterangan: "",
+      });
+    }
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setEditingItem(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingItem) {
+        await api.put(`/konversi-bahan/${editingItem.id}`, {
+          satuan_konversi: formData.satuan_konversi,
+          nilai_konversi: parseFloat(formData.nilai_konversi),
+          keterangan: formData.keterangan,
+        });
+      } else {
+        await api.post("/konversi-bahan", {
+          bahan_baku_id: parseInt(formData.bahan_baku_id),
+          satuan_konversi: formData.satuan_konversi,
+          nilai_konversi: parseFloat(formData.nilai_konversi),
+          keterangan: formData.keterangan,
+        });
+      }
+      handleCloseDialog();
+      fetchKonversi();
+    } catch (error: any) {
+      console.error("Error saving:", error);
+      alert(error.response?.data?.pesan || "Gagal menyimpan data");
     }
   };
 
@@ -57,6 +129,7 @@ export function KonversiBahanPage() {
             </p>
           </div>
           <Button
+            onClick={() => handleOpenDialog()}
             className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
             style={{
               boxShadow: "var(--shadow-md)",
@@ -156,6 +229,7 @@ export function KonversiBahanPage() {
                       <TableCell>
                         <div className="flex justify-center gap-2">
                           <Button
+                            onClick={() => handleOpenDialog(item)}
                             variant="ghost"
                             size="sm"
                             className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary"
@@ -185,6 +259,64 @@ export function KonversiBahanPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Dialog Form */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingItem ? "Edit Konversi Bahan" : "Tambah Konversi Bahan"}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit}>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Bahan Baku <span className="text-destructive">*</span>
+                  </label>
+                  <select
+                    value={formData.bahan_baku_id}
+                    onChange={(e) => setFormData({ ...formData, bahan_baku_id: e.target.value })}
+                    required
+                    disabled={!!editingItem}
+                    className="w-full px-3 py-2 rounded-md border border-input bg-background"
+                  >
+                    <option value="">Pilih Bahan Baku</option>
+                    {bahanBakuList.map((bahan) => (
+                      <option key={bahan.id} value={bahan.id}>
+                        {bahan.nama} ({bahan.satuan_dasar})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Satuan Konversi <span className="text-destructive">*</span>
+                  </label>
+                  <Input value={formData.satuan_konversi} onChange={(e) => setFormData({ ...formData, satuan_konversi: e.target.value })} placeholder="contoh: potong, porsi, cup" required />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Nilai Konversi <span className="text-destructive">*</span>
+                  </label>
+                  <Input type="number" step="0.01" value={formData.nilai_konversi} onChange={(e) => setFormData({ ...formData, nilai_konversi: e.target.value })} placeholder="contoh: 8, 12, 1000" required />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Keterangan</label>
+                  <Input value={formData.keterangan} onChange={(e) => setFormData({ ...formData, keterangan: e.target.value })} placeholder="contoh: 1 ekor = 8 potong" />
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                  Batal
+                </Button>
+                <Button type="submit">{editingItem ? "Update" : "Simpan"}</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

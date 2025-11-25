@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import { DashboardLayout } from "../components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { LoadingScreen } from "../components/LoadingScreen";
 import { Search, ArrowUpCircle, ArrowDownCircle, AlertCircle, History, Plus, Minus } from "lucide-react";
 import api from "../lib/api";
-import type { StokLog } from "../lib/types";
+import type { StokLog, BahanBaku } from "../lib/types";
 
 interface StokStats {
   total_masuk: number;
@@ -19,6 +20,7 @@ interface StokStats {
 export const StokLogPage = () => {
   const [stokLogs, setStokLogs] = useState<StokLog[]>([]);
   const [filteredLogs, setFilteredLogs] = useState<StokLog[]>([]);
+  const [bahanBakuList, setBahanBakuList] = useState<BahanBaku[]>([]);
   const [stats, setStats] = useState<StokStats>({
     total_masuk: 0,
     total_keluar: 0,
@@ -27,9 +29,17 @@ export const StokLogPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [tipeFilter, setTipeFilter] = useState<string>("semua");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogType, setDialogType] = useState<"tambah" | "kurangi">("tambah");
+  const [formData, setFormData] = useState({
+    bahan_baku_id: "",
+    jumlah: "",
+    keterangan: "",
+  });
 
   useEffect(() => {
     fetchStokLogs();
+    fetchBahanBaku();
   }, []);
 
   useEffect(() => {
@@ -48,6 +58,46 @@ export const StokLogPage = () => {
       alert("Gagal memuat data stok log");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchBahanBaku = async () => {
+    try {
+      const response = await api.get("/bahan-baku");
+      setBahanBakuList(response.data.data || []);
+    } catch (error) {
+      console.error("Error fetching bahan baku:", error);
+    }
+  };
+
+  const handleOpenDialog = (type: "tambah" | "kurangi") => {
+    setDialogType(type);
+    setFormData({
+      bahan_baku_id: "",
+      jumlah: "",
+      keterangan: "",
+    });
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const endpoint = dialogType === "tambah" ? "/stok-log/tambah" : "/stok-log/kurangi";
+      await api.post(endpoint, {
+        bahan_baku_id: parseInt(formData.bahan_baku_id),
+        jumlah: parseFloat(formData.jumlah),
+        keterangan: formData.keterangan,
+      });
+      handleCloseDialog();
+      fetchStokLogs();
+    } catch (error: any) {
+      console.error("Error:", error);
+      alert(error.response?.data?.pesan || "Gagal menyimpan data");
     }
   };
 
@@ -121,11 +171,23 @@ export const StokLogPage = () => {
     <DashboardLayout>
       <div className="p-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2" style={{ fontFamily: "var(--font-sans)" }}>
-            Riwayat Stok
-          </h1>
-          <p className="text-muted-foreground">Kelola dan pantau pergerakan stok bahan baku</p>
+        <div className="mb-8 flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold mb-2" style={{ fontFamily: "var(--font-sans)" }}>
+              Riwayat Stok
+            </h1>
+            <p className="text-muted-foreground">Kelola dan pantau pergerakan stok bahan baku</p>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => handleOpenDialog("tambah")} className="gap-2 bg-green-600 hover:bg-green-700">
+              <Plus className="h-4 w-4" />
+              Tambah Stok
+            </Button>
+            <Button onClick={() => handleOpenDialog("kurangi")} variant="destructive" className="gap-2">
+              <Minus className="h-4 w-4" />
+              Kurangi Stok
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -262,6 +324,53 @@ export const StokLogPage = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Dialog Form */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{dialogType === "tambah" ? "Tambah Stok" : "Kurangi Stok"}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit}>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Bahan Baku <span className="text-destructive">*</span>
+                  </label>
+                  <select value={formData.bahan_baku_id} onChange={(e) => setFormData({ ...formData, bahan_baku_id: e.target.value })} required className="w-full px-3 py-2 rounded-md border border-input bg-background">
+                    <option value="">Pilih Bahan Baku</option>
+                    {bahanBakuList.map((bahan) => (
+                      <option key={bahan.id} value={bahan.id}>
+                        {bahan.nama} (Stok: {bahan.stok_tersedia} {bahan.satuan_dasar})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Jumlah <span className="text-destructive">*</span>
+                  </label>
+                  <Input type="number" step="0.01" value={formData.jumlah} onChange={(e) => setFormData({ ...formData, jumlah: e.target.value })} placeholder="Masukkan jumlah" required />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Keterangan {dialogType === "kurangi" && <span className="text-destructive">*</span>}</label>
+                  <Input value={formData.keterangan} onChange={(e) => setFormData({ ...formData, keterangan: e.target.value })} placeholder="Masukkan keterangan" required={dialogType === "kurangi"} />
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                  Batal
+                </Button>
+                <Button type="submit" variant={dialogType === "tambah" ? "default" : "destructive"}>
+                  {dialogType === "tambah" ? "Tambah" : "Kurangi"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
