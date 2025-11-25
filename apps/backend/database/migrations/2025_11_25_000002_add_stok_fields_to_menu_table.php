@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('satuan_id')->nullable()->after('kelola_stok_mandiri')->constrained('satuan')->nullOnDelete();
         });
     }
-
+    
     /**
      * Reverse the migrations.
      */

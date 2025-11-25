@@ -11,7 +11,7 @@ class KonversiBahan extends Model
 
     protected $fillable = [
         'bahan_baku_id',
-        'satuan_konversi',
+        'satuan_id',
         'jumlah_konversi',
         'keterangan',
     ];
@@ -26,5 +26,13 @@ class KonversiBahan extends Model
     public function bahanBaku(): BelongsTo
     {
         return $this->belongsTo(BahanBaku::class);
+    }
+
+    /**
+     * Relasi ke satuan
+     */
+    public function satuan(): BelongsTo
+    {
+        return $this->belongsTo(Satuan::class);
     }
 }

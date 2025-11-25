@@ -44,7 +44,7 @@ class KonversiBahanController extends Controller
      */
     public function index(Request $request)
     {
-        $query = KonversiBahan::with('bahanBaku');
+        $query = KonversiBahan::with(['bahanBaku', 'satuan']);
 
         // Filter berdasarkan bahan baku
         if ($request->has('bahan_baku_id')) {
@@ -86,8 +86,8 @@ class KonversiBahanController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'bahan_baku_id' => 'required|exists:bahan_baku,id',
-            'satuan_konversi' => 'required|string|max:50',
-            'nilai_konversi' => 'required|numeric|min:0.01',
+            'satuan_id' => 'required|exists:satuan,id',
+            'jumlah_konversi' => 'required|numeric|min:0.01',
             'keterangan' => 'nullable|string'
         ]);
 
@@ -101,7 +101,7 @@ class KonversiBahanController extends Controller
 
         // Cek apakah konversi untuk satuan ini sudah ada
         $existing = KonversiBahan::where('bahan_baku_id', $request->bahan_baku_id)
-            ->where('satuan_konversi', $request->satuan_konversi)
+            ->where('satuan_id', $request->satuan_id)
             ->first();
 
         if ($existing) {
@@ -116,7 +116,7 @@ class KonversiBahanController extends Controller
         return response()->json([
             'sukses' => true,
             'pesan' => 'Konversi bahan berhasil ditambahkan',
-            'data' => $konversi->load('bahanBaku')
+            'data' => $konversi->load(['bahanBaku', 'satuan'])
         ], 201);
     }
 
@@ -164,7 +164,7 @@ class KonversiBahanController extends Controller
      */
     public function show($id)
     {
-        $konversi = KonversiBahan::with('bahanBaku')->find($id);
+        $konversi = KonversiBahan::with(['bahanBaku', 'satuan'])->find($id);
 
         if (!$konversi) {
             return response()->json([
@@ -244,8 +244,8 @@ class KonversiBahanController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'satuan_konversi' => 'sometimes|string|max:50',
-            'nilai_konversi' => 'sometimes|numeric|min:0.01',
+            'satuan_id' => 'sometimes|exists:satuan,id',
+            'jumlah_konversi' => 'sometimes|numeric|min:0.01',
             'keterangan' => 'nullable|string'
         ]);
 
@@ -262,7 +262,7 @@ class KonversiBahanController extends Controller
         return response()->json([
             'sukses' => true,
             'pesan' => 'Konversi bahan berhasil diupdate',
-            'data' => $konversi->load('bahanBaku')
+            'data' => $konversi->load(['bahanBaku', 'satuan'])
         ]);
     }
 

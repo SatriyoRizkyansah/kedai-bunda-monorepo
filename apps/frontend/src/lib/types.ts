@@ -95,10 +95,11 @@ export interface DetailTransaksi {
 export interface KonversiBahan {
   id: number;
   bahan_baku_id: number;
-  satuan_konversi: string;
-  nilai_konversi: number;
+  satuan_id: number;
+  jumlah_konversi: number;
   keterangan?: string;
   bahan_baku?: BahanBaku;
+  satuan?: Satuan;
   created_at: string;
   updated_at: string;
 }

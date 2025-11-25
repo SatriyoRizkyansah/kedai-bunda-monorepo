@@ -8,19 +8,20 @@ import { Input } from "@/components/ui/input";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
-import type { KonversiBahan, BahanBaku } from "@/lib/types";
+import type { KonversiBahan, BahanBaku, Satuan } from "@/lib/types";
 import { Plus, Pencil, Trash2, ArrowRightLeft } from "lucide-react";
 
 export function KonversiBahanPage() {
   const [konversi, setKonversi] = useState<KonversiBahan[]>([]);
   const [bahanBakuList, setBahanBakuList] = useState<BahanBaku[]>([]);
+  const [satuanList, setSatuanList] = useState<Satuan[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<KonversiBahan | null>(null);
   const [formData, setFormData] = useState({
     bahan_baku_id: "",
-    satuan_konversi: "",
-    nilai_konversi: "",
+    satuan_id: "",
+    jumlah_konversi: "",
     keterangan: "",
   });
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -29,6 +30,7 @@ export function KonversiBahanPage() {
   useEffect(() => {
     fetchKonversi();
     fetchBahanBaku();
+    fetchSatuan();
   }, []);
 
   const fetchKonversi = async () => {
@@ -54,21 +56,30 @@ export function KonversiBahanPage() {
     }
   };
 
+  const fetchSatuan = async () => {
+    try {
+      const response = await api.get("/satuan");
+      setSatuanList(response.data.data || []);
+    } catch (error) {
+      console.error("Error fetching satuan:", error);
+    }
+  };
+
   const handleOpenDialog = (item?: KonversiBahan) => {
     if (item) {
       setEditingItem(item);
       setFormData({
         bahan_baku_id: item.bahan_baku_id.toString(),
-        satuan_konversi: item.satuan_konversi,
-        nilai_konversi: item.nilai_konversi.toString(),
+        satuan_id: item.satuan_id.toString(),
+        jumlah_konversi: item.jumlah_konversi.toString(),
         keterangan: item.keterangan || "",
       });
     } else {
       setEditingItem(null);
       setFormData({
         bahan_baku_id: "",
-        satuan_konversi: "",
-        nilai_konversi: "",
+        satuan_id: "",
+        jumlah_konversi: "",
         keterangan: "",
       });
     }
@@ -85,15 +96,15 @@ export function KonversiBahanPage() {
     try {
       if (editingItem) {
         await api.put(`/konversi-bahan/${editingItem.id}`, {
-          satuan_konversi: formData.satuan_konversi,
-          nilai_konversi: parseFloat(formData.nilai_konversi),
+          satuan_id: parseInt(formData.satuan_id),
+          jumlah_konversi: parseFloat(formData.jumlah_konversi),
           keterangan: formData.keterangan,
         });
       } else {
         await api.post("/konversi-bahan", {
           bahan_baku_id: parseInt(formData.bahan_baku_id),
-          satuan_konversi: formData.satuan_konversi,
-          nilai_konversi: parseFloat(formData.nilai_konversi),
+          satuan_id: parseInt(formData.satuan_id),
+          jumlah_konversi: parseFloat(formData.jumlah_konversi),
           keterangan: formData.keterangan,
         });
       }
@@ -219,8 +230,8 @@ export function KonversiBahanPage() {
                   {konversi.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium text-foreground">{item.bahan_baku?.nama || "-"}</TableCell>
-                      <TableCell className="text-muted-foreground">{item.bahan_baku?.satuan || "-"}</TableCell>
-                      <TableCell className="text-foreground">{item.satuan_konversi}</TableCell>
+                      <TableCell className="text-muted-foreground">{item.bahan_baku?.satuan_dasar || "-"}</TableCell>
+                      <TableCell className="text-foreground">{item.satuan?.nama || "-"}</TableCell>
                       <TableCell className="text-right">
                         <Badge
                           variant="outline"
@@ -230,7 +241,7 @@ export function KonversiBahanPage() {
                             fontFamily: "var(--font-mono)",
                           }}
                         >
-                          {item.nilai_konversi}
+                          {item.jumlah_konversi}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground max-w-xs truncate">{item.keterangan || "-"}</TableCell>
@@ -300,14 +311,21 @@ export function KonversiBahanPage() {
                   <label className="text-sm font-medium">
                     Satuan Konversi <span className="text-destructive">*</span>
                   </label>
-                  <Input value={formData.satuan_konversi} onChange={(e) => setFormData({ ...formData, satuan_konversi: e.target.value })} placeholder="contoh: potong, porsi, cup" required />
+                  <select value={formData.satuan_id} onChange={(e) => setFormData({ ...formData, satuan_id: e.target.value })} required className="w-full px-3 py-2 rounded-md border border-input bg-background">
+                    <option value="">Pilih Satuan</option>
+                    {satuanList.map((satuan) => (
+                      <option key={satuan.id} value={satuan.id}>
+                        {satuan.nama} ({satuan.singkatan})
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
-                    Nilai Konversi <span className="text-destructive">*</span>
+                    Jumlah Konversi <span className="text-destructive">*</span>
                   </label>
-                  <Input type="number" step="0.01" value={formData.nilai_konversi} onChange={(e) => setFormData({ ...formData, nilai_konversi: e.target.value })} placeholder="contoh: 8, 12, 1000" required />
+                  <Input type="number" step="0.01" value={formData.jumlah_konversi} onChange={(e) => setFormData({ ...formData, jumlah_konversi: e.target.value })} placeholder="contoh: 8, 12, 1000" required />
                 </div>
 
                 <div className="space-y-2">
