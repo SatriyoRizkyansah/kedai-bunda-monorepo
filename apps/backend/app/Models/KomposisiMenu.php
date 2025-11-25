@@ -11,14 +11,19 @@ class KomposisiMenu extends Model
 
     protected $fillable = [
         'menu_id',
-        'bahan_baku_id',
+        'konversi_bahan_id',
         'jumlah',
-        'satuan',
     ];
 
     protected $casts = [
         'jumlah' => 'decimal:2',
     ];
+
+    // Append virtual attributes untuk backward compatibility
+    protected $appends = ['bahan_baku', 'satuan'];
+
+    // Pastikan konversiBahan selalu di-load untuk accessor
+    protected $with = ['konversiBahan.bahanBaku', 'konversiBahan.satuan'];
 
     /**
      * Relasi ke menu
@@ -29,10 +34,26 @@ class KomposisiMenu extends Model
     }
 
     /**
-     * Relasi ke bahan baku
+     * Relasi ke konversi bahan (include bahan_baku + satuan)
      */
-    public function bahanBaku(): BelongsTo
+    public function konversiBahan(): BelongsTo
     {
-        return $this->belongsTo(BahanBaku::class);
+        return $this->belongsTo(KonversiBahan::class);
+    }
+
+    /**
+     * Helper: akses bahan baku via konversi (backward compatible)
+     */
+    public function getBahanBakuAttribute()
+    {
+        return $this->konversiBahan?->bahanBaku;
+    }
+
+    /**
+     * Helper: akses satuan via konversi (backward compatible)
+     */
+    public function getSatuanAttribute()
+    {
+        return $this->konversiBahan?->satuan;
     }
 }

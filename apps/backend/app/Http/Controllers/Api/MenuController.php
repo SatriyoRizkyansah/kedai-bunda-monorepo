@@ -60,7 +60,7 @@ class MenuController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Menu::with(['komposisiMenu.bahanBaku']);
+        $query = Menu::with(['komposisiMenu.konversiBahan.bahanBaku', 'komposisiMenu.konversiBahan.satuan']);
 
         // Filter berdasarkan kategori
         if ($request->has('kategori')) {
@@ -223,7 +223,7 @@ class MenuController extends Controller
      */
     public function show($id)
     {
-        $menu = Menu::with(['komposisiMenu.bahanBaku'])->find($id);
+        $menu = Menu::with(['komposisiMenu.konversiBahan.bahanBaku', 'komposisiMenu.konversiBahan.satuan'])->find($id);
 
         if (!$menu) {
             return response()->json([
@@ -432,7 +432,7 @@ class MenuController extends Controller
      */
     public function cekStok($id)
     {
-        $menu = Menu::with(['komposisiMenu.bahanBaku'])->find($id);
+        $menu = Menu::with(['komposisiMenu.konversiBahan.bahanBaku', 'komposisiMenu.konversiBahan.satuan'])->find($id);
 
         if (!$menu) {
             return response()->json([
@@ -621,7 +621,7 @@ class MenuController extends Controller
      */
     public function getStokEfektif($id)
     {
-        $menu = Menu::with(['komposisiMenu.bahanBaku', 'satuan'])->find($id);
+        $menu = Menu::with(['komposisiMenu.konversiBahan.bahanBaku', 'komposisiMenu.konversiBahan.satuan', 'satuan'])->find($id);
 
         if (!$menu) {
             return response()->json([

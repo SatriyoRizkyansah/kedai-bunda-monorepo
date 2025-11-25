@@ -176,7 +176,7 @@ class TransaksiController extends Controller
             $detailItems = [];
             
             foreach ($request->items as $item) {
-                $menu = Menu::with('komposisiMenu.bahanBaku')->find($item['menu_id']);
+                $menu = Menu::with('komposisiMenu.konversiBahan.bahanBaku')->find($item['menu_id']);
                 
                 if (!$menu) {
                     throw new \Exception("Menu dengan ID {$item['menu_id']} tidak ditemukan");
@@ -373,7 +373,7 @@ class TransaksiController extends Controller
         DB::beginTransaction();
 
         try {
-            $transaksi = Transaksi::with('detailTransaksi.menu.komposisiMenu.bahanBaku')->find($id);
+            $transaksi = Transaksi::with('detailTransaksi.menu.komposisiMenu.konversiBahan.bahanBaku')->find($id);
 
             if (!$transaksi) {
                 throw new \Exception('Transaksi tidak ditemukan');

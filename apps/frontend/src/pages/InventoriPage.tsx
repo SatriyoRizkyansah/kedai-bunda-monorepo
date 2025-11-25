@@ -469,16 +469,16 @@ function KomposisiMenuTab() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<KomposisiMenu | null>(null);
-  const [formData, setFormData] = useState({ menu_id: "", bahan_baku_id: "", jumlah: "", satuan: "" });
+  const [formData, setFormData] = useState({ menu_id: "", konversi_bahan_id: "", jumlah: "" });
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmTargetId, setConfirmTargetId] = useState<number | null>(null);
   const [menuList, setMenuList] = useState<Menu[]>([]);
-  const [bahanList, setBahanList] = useState<BahanBaku[]>([]);
+  const [konversiList, setKonversiList] = useState<KonversiBahan[]>([]);
 
   useEffect(() => {
     fetchKomposisi();
     fetchMenus();
-    fetchBahanList();
+    fetchKonversi();
   }, []);
 
   useEffect(() => {
@@ -530,12 +530,12 @@ function KomposisiMenuTab() {
     }
   };
 
-  const fetchBahanList = async () => {
+  const fetchKonversi = async () => {
     try {
-      const res = await api.get("/bahan-baku");
-      setBahanList(res.data.data || []);
+      const res = await api.get("/konversi-bahan");
+      setKonversiList(res.data.data || []);
     } catch (err) {
-      console.error("Error fetching bahan baku", err);
+      console.error("Error fetching konversi", err);
     }
   };
 
@@ -562,13 +562,12 @@ function KomposisiMenuTab() {
       setEditingItem(item);
       setFormData({
         menu_id: item.menu_id.toString(),
-        bahan_baku_id: item.bahan_baku_id.toString(),
+        konversi_bahan_id: item.konversi_bahan_id?.toString() || "",
         jumlah: item.jumlah.toString(),
-        satuan: item.satuan || "",
       });
     } else {
       setEditingItem(null);
-      setFormData({ menu_id: "", bahan_baku_id: "", jumlah: "", satuan: "" });
+      setFormData({ menu_id: "", konversi_bahan_id: "", jumlah: "" });
     }
     setDialogOpen(true);
   };
@@ -576,7 +575,7 @@ function KomposisiMenuTab() {
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setEditingItem(null);
-    setFormData({ menu_id: "", bahan_baku_id: "", jumlah: "", satuan: "" });
+    setFormData({ menu_id: "", konversi_bahan_id: "", jumlah: "" });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -584,9 +583,8 @@ function KomposisiMenuTab() {
     try {
       const payload = {
         menu_id: parseInt(formData.menu_id),
-        bahan_baku_id: parseInt(formData.bahan_baku_id),
+        konversi_bahan_id: parseInt(formData.konversi_bahan_id),
         jumlah: parseFloat(formData.jumlah),
-        satuan: formData.satuan,
       };
 
       if (editingItem) {
@@ -599,6 +597,15 @@ function KomposisiMenuTab() {
     } catch (err) {
       console.error("Error saving komposisi:", err);
     }
+  };
+
+  // Helper: dapatkan nama bahan dari konversi
+  const getBahanNama = (item: KomposisiMenu) => {
+    return item.konversi_bahan?.bahan_baku?.nama || item.bahan_baku?.nama || "-";
+  };
+
+  const getSatuanNama = (item: KomposisiMenu) => {
+    return item.konversi_bahan?.satuan?.nama || item.satuan?.nama || "-";
   };
 
   return (
@@ -622,7 +629,7 @@ function KomposisiMenuTab() {
             <Layers className="h-5 w-5 text-primary mt-0.5" />
             <div>
               <h3 className="font-medium text-sm">Tentang Komposisi Menu</h3>
-              <p className="text-xs text-muted-foreground mt-1">Komposisi menu mendefinisikan bahan baku yang diperlukan untuk membuat setiap menu. Contoh: "Nasi Goreng" membutuhkan Nasi 200g, Telur 1 butir, dll.</p>
+              <p className="text-xs text-muted-foreground mt-1">Pilih bahan baku beserta satuannya dari daftar konversi yang sudah ada. Contoh: "Nasi Goreng" butuh 1 porsi Nasi, 1 potong Ayam.</p>
             </div>
           </div>
         </CardContent>
@@ -653,7 +660,7 @@ function KomposisiMenuTab() {
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-muted-foreground">Harga</p>
-                    <p className="font-semibold text-primary">Rp {Number(group.menu.harga).toLocaleString("id-ID")}</p>
+                    <p className="font-semibold text-primary">Rp {Number(group.menu.harga || group.menu.harga_jual).toLocaleString("id-ID")}</p>
                   </div>
                 </div>
               </CardHeader>
@@ -662,24 +669,20 @@ function KomposisiMenuTab() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Bahan Baku</TableHead>
-                      <TableHead>Satuan Bahan</TableHead>
                       <TableHead>Jumlah</TableHead>
-                      <TableHead>Satuan Komposisi</TableHead>
+                      <TableHead>Satuan</TableHead>
                       <TableHead className="text-right">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {group.komposisi.map((item) => (
                       <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.bahan_baku?.nama || "-"}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">{item.bahan_baku?.satuan_dasar || "-"}</Badge>
-                        </TableCell>
+                        <TableCell className="font-medium">{getBahanNama(item)}</TableCell>
                         <TableCell>
                           <span className="font-mono font-semibold text-primary">{Number(item.jumlah).toFixed(2)}</span>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">{item.satuan}</Badge>
+                          <Badge variant="outline">{getSatuanNama(item)}</Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
@@ -701,11 +704,12 @@ function KomposisiMenuTab() {
         </div>
       )}
 
-      {/* Add/Edit Dialog */}
+      {/* Add/Edit Dialog - SIMPLIFIED! */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>{editingItem ? "Edit Komposisi" : "Tambah Komposisi"}</DialogTitle>
+            <DialogDescription>Pilih menu, lalu pilih bahan (sudah include satuan dari konversi)</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
             <div className="space-y-4 py-4">
@@ -713,7 +717,7 @@ function KomposisiMenuTab() {
                 <label className="text-sm font-medium">
                   Menu <span className="text-destructive">*</span>
                 </label>
-                <select value={formData.menu_id} onChange={(e) => setFormData({ ...formData, menu_id: e.target.value })} className="w-full px-3 py-2 rounded-md border border-input bg-background" required>
+                <select value={formData.menu_id} onChange={(e) => setFormData({ ...formData, menu_id: e.target.value })} className="w-full px-3 py-2 rounded-md border border-input bg-background" required disabled={!!editingItem}>
                   <option value="">Pilih menu</option>
                   {menuList.map((m) => (
                     <option key={m.id} value={m.id}>
@@ -725,31 +729,25 @@ function KomposisiMenuTab() {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">
-                  Bahan Baku <span className="text-destructive">*</span>
+                  Bahan & Satuan <span className="text-destructive">*</span>
                 </label>
-                <select value={formData.bahan_baku_id} onChange={(e) => setFormData({ ...formData, bahan_baku_id: e.target.value })} className="w-full px-3 py-2 rounded-md border border-input bg-background" required>
-                  <option value="">Pilih bahan baku</option>
-                  {bahanList.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.nama} ({b.satuan_dasar})
+                <select value={formData.konversi_bahan_id} onChange={(e) => setFormData({ ...formData, konversi_bahan_id: e.target.value })} className="w-full px-3 py-2 rounded-md border border-input bg-background" required>
+                  <option value="">Pilih bahan & satuan</option>
+                  {konversiList.map((k) => (
+                    <option key={k.id} value={k.id}>
+                      {k.bahan_baku?.nama} - {k.satuan?.nama} ({k.keterangan || `1 ${k.bahan_baku?.satuan_dasar} = ${k.jumlah_konversi} ${k.satuan?.singkatan}`})
                     </option>
                   ))}
                 </select>
+                <p className="text-xs text-muted-foreground">Tidak ada satuan yang cocok? Tambahkan konversi baru di tab "Konversi"</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Jumlah <span className="text-destructive">*</span>
-                  </label>
-                  <Input type="number" step="0.01" value={formData.jumlah} onChange={(e) => setFormData({ ...formData, jumlah: e.target.value })} required />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Satuan <span className="text-destructive">*</span>
-                  </label>
-                  <Input value={formData.satuan} onChange={(e) => setFormData({ ...formData, satuan: e.target.value })} placeholder="gram, butir, ml" required />
-                </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Jumlah <span className="text-destructive">*</span>
+                </label>
+                <Input type="number" step="0.01" min="0.01" value={formData.jumlah} onChange={(e) => setFormData({ ...formData, jumlah: e.target.value })} placeholder="Contoh: 1, 2, 0.5" required />
+                <p className="text-xs text-muted-foreground">Jumlah dalam satuan yang dipilih di atas</p>
               </div>
             </div>
 

@@ -58,11 +58,13 @@ export interface Satuan {
 export interface KomposisiMenu {
   id?: number;
   menu_id: number;
-  bahan_baku_id: number;
+  konversi_bahan_id: number;
   jumlah: number;
-  satuan: string;
-  bahan_baku?: BahanBaku;
+  konversi_bahan?: KonversiBahan;
   menu?: Menu;
+  // Helper computed fields (dari backend)
+  bahan_baku?: BahanBaku;
+  satuan?: Satuan;
 }
 
 // Transaksi types
