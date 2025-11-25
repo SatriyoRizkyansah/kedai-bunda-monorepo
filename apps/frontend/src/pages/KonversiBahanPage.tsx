@@ -23,6 +23,8 @@ export function KonversiBahanPage() {
     nilai_konversi: "",
     keterangan: "",
   });
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmTargetId, setConfirmTargetId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchKonversi();
@@ -37,7 +39,7 @@ export function KonversiBahanPage() {
       setKonversi(response.data.data || []);
     } catch (error) {
       console.error("Error fetching konversi:", error);
-      alert("Gagal memuat data konversi bahan");
+      // handled via console; UI will show empty state
     } finally {
       setLoading(false);
     }
@@ -99,19 +101,25 @@ export function KonversiBahanPage() {
       fetchKonversi();
     } catch (error: any) {
       console.error("Error saving:", error);
-      alert(error.response?.data?.pesan || "Gagal menyimpan data");
+      // show console error; keep UI stable
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Yakin ingin menghapus konversi ini?")) return;
+    setConfirmTargetId(id);
+    setConfirmOpen(true);
+  };
 
+  const performDelete = async (id: number) => {
     try {
       await api.delete(`/konversi-bahan/${id}`);
+      setConfirmOpen(false);
+      setConfirmTargetId(null);
       fetchKonversi();
     } catch (error: any) {
       console.error("Error deleting:", error);
-      alert(error.response?.data?.pesan || "Gagal menghapus konversi");
+      setConfirmOpen(false);
+      setConfirmTargetId(null);
     }
   };
 
@@ -315,6 +323,25 @@ export function KonversiBahanPage() {
                 <Button type="submit">{editingItem ? "Update" : "Simpan"}</Button>
               </DialogFooter>
             </form>
+          </DialogContent>
+        </Dialog>
+        {/* Confirm Delete Dialog */}
+        <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <DialogContent className="sm:max-w-[420px]">
+            <DialogHeader>
+              <DialogTitle>Hapus Konversi</DialogTitle>
+            </DialogHeader>
+            <div className="py-2">
+              <p className="text-sm text-muted-foreground">Apakah Anda yakin ingin menghapus konversi ini? Tindakan ini tidak dapat dibatalkan.</p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConfirmOpen(false)}>
+                Batal
+              </Button>
+              <Button onClick={() => confirmTargetId && performDelete(confirmTargetId)} variant="destructive">
+                Hapus
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
