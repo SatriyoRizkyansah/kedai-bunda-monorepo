@@ -5,6 +5,7 @@ import { InventoriPage } from "./pages/InventoriPage";
 import { MenuPage } from "./pages/MenuPage";
 import { TransaksiPage } from "./pages/TransaksiPage";
 import { StokLogPage } from "./pages/StokLogPage";
+import { LaporanPage } from "./pages/LaporanPage";
 import { ThemeSettingsPage } from "./pages/ThemeSettingsPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -54,6 +55,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <StokLogPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/laporan"
+        element={
+          <ProtectedRoute>
+            <LaporanPage />
           </ProtectedRoute>
         }
       />

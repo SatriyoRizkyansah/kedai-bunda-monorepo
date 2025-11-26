@@ -7,6 +7,8 @@ use App\Models\Transaksi;
 use App\Models\Menu;
 use App\Models\BahanBaku;
 use App\Models\User;
+use App\Models\StokLog;
+use App\Models\DetailTransaksi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -347,6 +349,275 @@ class DashboardController extends Controller
                     'total_nilai_stok' => $totalNilaiStok
                 ],
                 'bahan_baku' => $bahanBaku
+            ]
+        ]);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/laporan/stok-log",
+     *     summary="Laporan riwayat stok masuk/keluar",
+     *     tags={"Laporan"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="tanggal_mulai",
+     *         in="query",
+     *         description="Tanggal mulai periode (YYYY-MM-DD)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Parameter(
+     *         name="tanggal_selesai",
+     *         in="query",
+     *         description="Tanggal selesai periode (YYYY-MM-DD)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Parameter(
+     *         name="bahan_baku_id",
+     *         in="query",
+     *         description="Filter berdasarkan bahan baku",
+     *         required=false,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Laporan stok log berhasil diambil"
+     *     )
+     * )
+     */
+    public function laporanStokLog(Request $request)
+    {
+        $tanggalMulai = $request->input('tanggal_mulai', Carbon::now()->startOfMonth()->format('Y-m-d'));
+        $tanggalSelesai = $request->input('tanggal_selesai', Carbon::now()->format('Y-m-d'));
+        $bahanBakuId = $request->input('bahan_baku_id');
+        
+        $query = StokLog::with(['bahanBaku', 'user'])
+            ->whereBetween('created_at', [
+                $tanggalMulai . ' 00:00:00',
+                $tanggalSelesai . ' 23:59:59'
+            ]);
+            
+        if ($bahanBakuId) {
+            $query->where('bahan_baku_id', $bahanBakuId);
+        }
+        
+        $stokLogs = $query->orderBy('created_at', 'desc')->get();
+        
+        // Ringkasan stok masuk
+        $stokMasuk = $stokLogs->where('tipe', 'masuk');
+        $totalStokMasuk = $stokMasuk->sum('jumlah');
+        $nilaiStokMasuk = $stokMasuk->sum(function($log) {
+            return $log->jumlah * ($log->bahanBaku->harga_per_satuan ?? 0);
+        });
+        
+        // Ringkasan stok keluar
+        $stokKeluar = $stokLogs->where('tipe', 'keluar');
+        $totalStokKeluar = $stokKeluar->sum('jumlah');
+        $nilaiStokKeluar = $stokKeluar->sum(function($log) {
+            return $log->jumlah * ($log->bahanBaku->harga_per_satuan ?? 0);
+        });
+        
+        // Group by bahan baku
+        $perBahanBaku = $stokLogs->groupBy('bahan_baku_id')->map(function($logs) {
+            $bahanBaku = $logs->first()->bahanBaku;
+            $masuk = $logs->where('tipe', 'masuk')->sum('jumlah');
+            $keluar = $logs->where('tipe', 'keluar')->sum('jumlah');
+            
+            return [
+                'bahan_baku_id' => $bahanBaku->id,
+                'nama' => $bahanBaku->nama,
+                'satuan_dasar' => $bahanBaku->satuan_dasar,
+                'stok_masuk' => $masuk,
+                'stok_keluar' => $keluar,
+                'selisih' => $masuk - $keluar,
+                'nilai_masuk' => $masuk * ($bahanBaku->harga_per_satuan ?? 0),
+                'nilai_keluar' => $keluar * ($bahanBaku->harga_per_satuan ?? 0),
+            ];
+        })->values();
+        
+        return response()->json([
+            'sukses' => true,
+            'pesan' => 'Berhasil mengambil laporan stok log',
+            'data' => [
+                'periode' => [
+                    'mulai' => $tanggalMulai,
+                    'selesai' => $tanggalSelesai
+                ],
+                'ringkasan' => [
+                    'total_transaksi' => $stokLogs->count(),
+                    'stok_masuk' => [
+                        'jumlah_transaksi' => $stokMasuk->count(),
+                        'total_unit' => $totalStokMasuk,
+                        'nilai' => $nilaiStokMasuk
+                    ],
+                    'stok_keluar' => [
+                        'jumlah_transaksi' => $stokKeluar->count(),
+                        'total_unit' => $totalStokKeluar,
+                        'nilai' => $nilaiStokKeluar
+                    ]
+                ],
+                'per_bahan_baku' => $perBahanBaku,
+                'logs' => $stokLogs
+            ]
+        ]);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/laporan/keuntungan",
+     *     summary="Laporan keuntungan/laba rugi",
+     *     tags={"Laporan"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="tanggal_mulai",
+     *         in="query",
+     *         description="Tanggal mulai periode (YYYY-MM-DD)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Parameter(
+     *         name="tanggal_selesai",
+     *         in="query",
+     *         description="Tanggal selesai periode (YYYY-MM-DD)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Laporan keuntungan berhasil diambil"
+     *     )
+     * )
+     */
+    public function laporanKeuntungan(Request $request)
+    {
+        $tanggalMulai = $request->input('tanggal_mulai', Carbon::now()->startOfMonth()->format('Y-m-d'));
+        $tanggalSelesai = $request->input('tanggal_selesai', Carbon::now()->format('Y-m-d'));
+        
+        // Pendapatan dari penjualan
+        $transaksi = Transaksi::with(['detailTransaksi.menu.komposisi.konversiBahan.bahanBaku'])
+            ->whereBetween('created_at', [
+                $tanggalMulai . ' 00:00:00',
+                $tanggalSelesai . ' 23:59:59'
+            ])
+            ->where('status', 'selesai')
+            ->get();
+            
+        $totalPendapatan = $transaksi->sum('total');
+        $totalTransaksi = $transaksi->count();
+        
+        // Hitung perkiraan HPP (Harga Pokok Penjualan)
+        $totalHPP = 0;
+        $detailPerMenu = [];
+        
+        foreach ($transaksi as $trx) {
+            foreach ($trx->detailTransaksi as $detail) {
+                $menu = $detail->menu;
+                $jumlahTerjual = $detail->jumlah;
+                $pendapatanMenu = $detail->subtotal;
+                
+                // Hitung HPP dari komposisi
+                $hppPerUnit = 0;
+                if ($menu && $menu->komposisi) {
+                    foreach ($menu->komposisi as $komp) {
+                        $konversi = $komp->konversiBahan;
+                        if ($konversi && $konversi->bahanBaku) {
+                            // Hitung biaya bahan baku per unit menu
+                            $hargaPerSatuanDasar = $konversi->bahanBaku->harga_per_satuan ?? 0;
+                            $biayaPerUnit = ($komp->jumlah / $konversi->jumlah_konversi) * $hargaPerSatuanDasar;
+                            $hppPerUnit += $biayaPerUnit;
+                        }
+                    }
+                }
+                
+                $hppTotal = $hppPerUnit * $jumlahTerjual;
+                $totalHPP += $hppTotal;
+                
+                // Track per menu
+                $menuId = $menu->id ?? 0;
+                if (!isset($detailPerMenu[$menuId])) {
+                    $detailPerMenu[$menuId] = [
+                        'menu_id' => $menuId,
+                        'nama_menu' => $menu->nama ?? 'Unknown',
+                        'kategori' => $menu->kategori ?? 'Unknown',
+                        'harga_jual' => $menu->harga_jual ?? 0,
+                        'hpp_per_unit' => $hppPerUnit,
+                        'margin_per_unit' => ($menu->harga_jual ?? 0) - $hppPerUnit,
+                        'jumlah_terjual' => 0,
+                        'total_pendapatan' => 0,
+                        'total_hpp' => 0,
+                        'total_laba' => 0,
+                    ];
+                }
+                
+                $detailPerMenu[$menuId]['jumlah_terjual'] += $jumlahTerjual;
+                $detailPerMenu[$menuId]['total_pendapatan'] += $pendapatanMenu;
+                $detailPerMenu[$menuId]['total_hpp'] += $hppTotal;
+                $detailPerMenu[$menuId]['total_laba'] += ($pendapatanMenu - $hppTotal);
+            }
+        }
+        
+        // Hitung biaya stok masuk (pembelian bahan baku)
+        $biayaPembelian = StokLog::where('tipe', 'masuk')
+            ->whereBetween('created_at', [
+                $tanggalMulai . ' 00:00:00',
+                $tanggalSelesai . ' 23:59:59'
+            ])
+            ->get()
+            ->sum(function($log) {
+                return $log->jumlah * ($log->bahanBaku->harga_per_satuan ?? 0);
+            });
+        
+        $labaKotor = $totalPendapatan - $totalHPP;
+        $marginKotor = $totalPendapatan > 0 ? ($labaKotor / $totalPendapatan) * 100 : 0;
+        
+        // Urutkan per menu berdasarkan laba
+        $detailPerMenu = collect($detailPerMenu)->sortByDesc('total_laba')->values();
+        
+        // Trend harian
+        $trendHarian = [];
+        $currentDate = Carbon::parse($tanggalMulai);
+        $endDate = Carbon::parse($tanggalSelesai);
+        
+        while ($currentDate <= $endDate) {
+            $dateStr = $currentDate->format('Y-m-d');
+            
+            $pendapatanHari = $transaksi->filter(function($trx) use ($dateStr) {
+                return Carbon::parse($trx->created_at)->format('Y-m-d') === $dateStr;
+            })->sum('total');
+            
+            // Simplified HPP calculation for trend
+            $hppHari = $pendapatanHari * ($totalPendapatan > 0 ? ($totalHPP / $totalPendapatan) : 0);
+            
+            $trendHarian[] = [
+                'tanggal' => $dateStr,
+                'hari' => $currentDate->locale('id')->isoFormat('dddd'),
+                'pendapatan' => $pendapatanHari,
+                'hpp' => round($hppHari, 2),
+                'laba' => round($pendapatanHari - $hppHari, 2)
+            ];
+            
+            $currentDate->addDay();
+        }
+        
+        return response()->json([
+            'sukses' => true,
+            'pesan' => 'Berhasil mengambil laporan keuntungan',
+            'data' => [
+                'periode' => [
+                    'mulai' => $tanggalMulai,
+                    'selesai' => $tanggalSelesai
+                ],
+                'ringkasan' => [
+                    'total_transaksi' => $totalTransaksi,
+                    'total_pendapatan' => $totalPendapatan,
+                    'total_hpp' => round($totalHPP, 2),
+                    'laba_kotor' => round($labaKotor, 2),
+                    'margin_kotor_persen' => round($marginKotor, 2),
+                    'biaya_pembelian_stok' => $biayaPembelian
+                ],
+                'per_menu' => $detailPerMenu,
+                'trend_harian' => $trendHarian
             ]
         ]);
     }

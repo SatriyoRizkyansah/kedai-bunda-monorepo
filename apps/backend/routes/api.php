@@ -37,6 +37,8 @@ Route::middleware(['auth:api'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::get('/laporan/penjualan', [DashboardController::class, 'laporanPenjualan']);
     Route::get('/laporan/stok', [DashboardController::class, 'laporanStok']);
+    Route::get('/laporan/stok-log', [DashboardController::class, 'laporanStokLog']);
+    Route::get('/laporan/keuntungan', [DashboardController::class, 'laporanKeuntungan']);
 
     // Master Data Satuan (semua yang login bisa baca)
     Route::get('satuan', [SatuanController::class, 'index']);

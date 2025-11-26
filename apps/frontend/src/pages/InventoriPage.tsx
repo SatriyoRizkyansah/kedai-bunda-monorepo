@@ -16,6 +16,7 @@ import { Plus, Pencil, Trash2, Search, AlertCircle, Package, PackagePlus, Packag
 function BahanBakuTab() {
   const [bahanBaku, setBahanBaku] = useState<BahanBaku[]>([]);
   const [satuanList, setSatuanList] = useState<Satuan[]>([]);
+  const [konversiList, setKonversiList] = useState<KonversiBahan[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -48,6 +49,7 @@ function BahanBakuTab() {
   useEffect(() => {
     fetchBahanBaku();
     fetchSatuan();
+    fetchKonversi();
   }, []);
 
   const fetchBahanBaku = async () => {
@@ -71,9 +73,33 @@ function BahanBakuTab() {
     }
   };
 
+  const fetchKonversi = async () => {
+    try {
+      const response = await api.get("/konversi-bahan");
+      setKonversiList(response.data.data || []);
+    } catch (error) {
+      console.error("Error fetching konversi:", error);
+    }
+  };
+
   const filteredBahanBaku = bahanBaku.filter((item) => item.nama.toLowerCase().includes(searchTerm.toLowerCase()));
 
   const isLowStock = (item: BahanBaku) => Number(item.stok_tersedia || 0) < 10;
+
+  // Helper: Hitung stok dalam satuan konversi
+  const getKonversiStok = (item: BahanBaku) => {
+    const konversiItem = konversiList.filter((k) => k.bahan_baku_id === item.id);
+    if (konversiItem.length === 0) return null;
+
+    // Ambil konversi pertama (biasanya yang paling umum dipakai)
+    return konversiItem.map((k) => {
+      const stokKonversi = Number(item.stok_tersedia) * Number(k.jumlah_konversi);
+      return {
+        jumlah: Math.floor(stokKonversi), // Bulatkan ke bawah
+        satuan: k.satuan?.nama || k.satuan?.singkatan || "",
+      };
+    });
+  };
 
   const handleOpenDialog = (item?: BahanBaku) => {
     if (item) {
@@ -219,8 +245,7 @@ function BahanBakuTab() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nama Bahan</TableHead>
-                  <TableHead>Satuan</TableHead>
-                  <TableHead className="text-right">Stok</TableHead>
+                  <TableHead>Stok Tersedia</TableHead>
                   <TableHead className="text-right">Harga/Satuan</TableHead>
                   <TableHead className="text-center">Status</TableHead>
                   <TableHead className="text-center">Aksi</TableHead>
@@ -229,12 +254,27 @@ function BahanBakuTab() {
               <TableBody>
                 {filteredBahanBaku.map((item) => {
                   const lowStock = isLowStock(item);
+                  const konversiStok = getKonversiStok(item);
                   return (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">{item.nama}</TableCell>
-                      <TableCell className="text-muted-foreground">{item.satuan_dasar}</TableCell>
-                      <TableCell className="text-right">
-                        <span className={`font-semibold ${lowStock ? "text-destructive" : ""}`}>{Number(item.stok_tersedia || 0).toFixed(2)}</span>
+                      <TableCell>
+                        <div className="space-y-1">
+                          {/* Stok utama dalam satuan dasar */}
+                          <div className={`font-semibold ${lowStock ? "text-destructive" : "text-foreground"}`}>
+                            {Math.floor(Number(item.stok_tersedia || 0))} {item.satuan?.nama || item.satuan_dasar}
+                          </div>
+                          {/* Stok dalam satuan konversi */}
+                          {konversiStok && konversiStok.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {konversiStok.map((k, idx) => (
+                                <Badge key={idx} variant="outline" className="text-xs font-normal text-muted-foreground">
+                                  ≈ {k.jumlah} {k.satuan}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right font-medium">Rp {Number(item.harga_per_satuan || 0).toLocaleString("id-ID")}</TableCell>
                       <TableCell className="text-center">
@@ -991,10 +1031,7 @@ function KonversiBahanTab() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Bahan Baku</TableHead>
-                  <TableHead>Satuan Asal</TableHead>
-                  <TableHead>Satuan Tujuan</TableHead>
-                  <TableHead className="text-right">Nilai Konversi</TableHead>
-                  <TableHead>Keterangan</TableHead>
+                  <TableHead>Konversi</TableHead>
                   <TableHead className="text-center">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
@@ -1002,14 +1039,18 @@ function KonversiBahanTab() {
                 {konversi.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">{item.bahan_baku?.nama || "-"}</TableCell>
-                    <TableCell className="text-muted-foreground">{item.bahan_baku?.satuan_dasar || "-"}</TableCell>
-                    <TableCell>{item.satuan?.nama || "-"}</TableCell>
-                    <TableCell className="text-right">
-                      <Badge variant="outline" className="font-mono">
-                        {item.jumlah_konversi}
-                      </Badge>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="font-medium">
+                          1 {item.bahan_baku?.satuan?.nama || item.bahan_baku?.satuan_dasar || "-"}
+                        </Badge>
+                        <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
+                        <Badge className="bg-primary/10 text-primary hover:bg-primary/20 font-medium">
+                          {Math.floor(Number(item.jumlah_konversi))} {item.satuan?.nama || "-"}
+                        </Badge>
+                      </div>
+                      {item.keterangan && <p className="text-xs text-muted-foreground mt-1">{item.keterangan}</p>}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground max-w-xs truncate">{item.keterangan || "-"}</TableCell>
                     <TableCell>
                       <div className="flex justify-center gap-1">
                         <Button onClick={() => handleOpenDialog(item)} variant="ghost" size="sm" className="h-8 w-8 p-0">
