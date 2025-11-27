@@ -10,8 +10,9 @@ WORKDIR /app
 # Copy package files from web app
 COPY apps/web/package.json ./
 
-# Install dependencies using npm install (no lock file in subdirectory)
-RUN npm install --legacy-peer-deps
+# Install dependencies - explicitly install react-is for recharts compatibility
+RUN npm install --legacy-peer-deps && \
+    npm install react-is@18 --save --legacy-peer-deps
 
 # Copy source code
 COPY apps/web/ .
