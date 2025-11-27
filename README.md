@@ -9,8 +9,8 @@ Proyek ini menggunakan **Turborepo** untuk mengelola multiple aplikasi dalam sat
 ```
 kedai-bunda-pwa/
 ├── apps/
-│   ├── backend/          # Laravel API (PHP 8.2+)
-│   └── frontend/         # Vite + React + TypeScript
+│   ├── api/              # Laravel API (PHP 8.2+)
+│   └── web/              # Vite + React + TypeScript
 ├── turbo.json           # Turbo configuration
 └── package.json         # Root workspace
 ```
@@ -38,9 +38,9 @@ kedai-bunda-pwa/
    npm install
    ```
 
-3. **Setup Backend (Laravel)**
+3. **Setup API (Laravel)**
    ```bash
-   cd apps/backend
+   cd apps/api
    composer install
    cp .env.example .env
    php artisan key:generate
@@ -51,9 +51,9 @@ kedai-bunda-pwa/
    php artisan l5-swagger:generate
    ```
 
-4. **Setup Frontend (Vite + React)**
+4. **Setup Web (Vite + React)**
    ```bash
-   cd apps/frontend
+   cd apps/web
    npm install
    ```
 
@@ -66,18 +66,18 @@ npm run dev
 
 **Atau jalankan terpisah:**
 
-Backend:
+API:
 ```bash
-npm run backend
+npm run api
 # atau
-cd apps/backend && php artisan serve
+cd apps/api && php artisan serve
 ```
 
-Frontend:
+Web:
 ```bash
-npm run frontend
+npm run web
 # atau
-cd apps/frontend && npm run dev
+cd apps/web && npm run dev
 ```
 
 ### Build Production
@@ -88,7 +88,7 @@ npm run build
 
 ## 📱 Applications
 
-### Backend (Laravel API)
+### API (Laravel)
 - **URL**: http://localhost:8000
 - **API Docs**: http://localhost:8000/api/documentation
 - **Tech Stack**: Laravel 11, JWT Auth, SQLite
@@ -101,7 +101,7 @@ npm run build
 - Dashboard & Laporan
 - User Management (Super Admin)
 
-### Frontend (Vite + React)
+### Web (Vite + React)
 - **URL**: http://localhost:5173
 - **Tech Stack**: Vite, React 18, TypeScript, TailwindCSS v4, Radix UI
 
@@ -128,32 +128,32 @@ Setiap tema memiliki variant light & dark.
 
 ## 📚 Documentation
 
-- [API Documentation](apps/backend/doc/API_DOCUMENTATION.md)
+- [API Documentation](apps/api/doc/API_DOCUMENTATION.md)
 - [Swagger UI](http://localhost:8000/api/documentation)
-- [Proses Bisnis](apps/backend/doc/todolist.txt)
+- [Proses Bisnis](apps/api/doc/todolist.txt)
 
 ## 🔧 Useful Commands
 
 ```bash
 # Development
 npm run dev              # Run all apps
-npm run backend         # Run backend only
-npm run frontend        # Run frontend only
+npm run api              # Run API only
+npm run web              # Run web only
 
 # Build
-npm run build           # Build all apps
+npm run build            # Build all apps
 
 # Lint & Format
-npm run lint            # Lint all code
-npm run format          # Format with Prettier
+npm run lint             # Lint all code
+npm run format           # Format with Prettier
 
 # Clean
-npm run clean           # Clean all build artifacts
+npm run clean            # Clean all build artifacts
 ```
 
 ## 📝 Environment Variables
 
-### Backend (.env)
+### API (.env)
 ```env
 APP_NAME="Kedai Bunda POS"
 APP_ENV=local
@@ -166,7 +166,7 @@ JWT_SECRET=<generated-secret>
 JWT_TTL=10080  # 7 days in minutes
 ```
 
-### Frontend (.env)
+### Web (.env)
 ```env
 VITE_API_URL=http://localhost:8000/api
 ```

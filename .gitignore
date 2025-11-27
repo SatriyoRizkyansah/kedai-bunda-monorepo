@@ -35,12 +35,12 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# Frontend specific
+# Web (React/Vite) specific
 /apps/web/dist
 /apps/web/.vite
 /apps/web/coverage
 
-# Backend specific
+# API (Laravel) specific
 /apps/api/vendor
 /apps/api/node_modules
 /apps/api/public/build

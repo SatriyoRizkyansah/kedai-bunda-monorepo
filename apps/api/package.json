@@ -1,8 +1,8 @@
 {
-    "name": "@kedai-bunda/backend",
+    "name": "@kedai-bunda/api",
     "version": "1.0.0",
     "private": true,
-    "description": "Kedai Bunda POS - Laravel API Backend",
+    "description": "Kedai Bunda POS - Laravel API",
     "scripts": {
         "dev": "php artisan serve",
         "build": "php artisan config:cache && php artisan route:cache && php artisan view:cache",
