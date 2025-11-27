@@ -28,23 +28,26 @@ kedai-bunda-pwa/
 ### Installation
 
 1. **Clone repository**
+
    ```bash
    git clone <repository-url>
    cd kedai-bunda-pwa
    ```
 
 2. **Install root dependencies**
+
    ```bash
    npm install
    ```
 
 3. **Setup API (Laravel)**
+
    ```bash
    cd apps/api
    composer install
    cp .env.example .env
    php artisan key:generate
-   
+
    # Setup database di .env (sudah pake SQLite by default)
    php artisan migrate --seed
    php artisan jwt:secret
@@ -60,6 +63,7 @@ kedai-bunda-pwa/
 ### Development
 
 **Jalankan semua apps sekaligus (Recommended):**
+
 ```bash
 npm run dev
 ```
@@ -67,6 +71,7 @@ npm run dev
 **Atau jalankan terpisah:**
 
 API:
+
 ```bash
 npm run api
 # atau
@@ -74,6 +79,7 @@ cd apps/api && php artisan serve
 ```
 
 Web:
+
 ```bash
 npm run web
 # atau
@@ -89,11 +95,13 @@ npm run build
 ## 📱 Applications
 
 ### API (Laravel)
+
 - **URL**: http://localhost:8000
 - **API Docs**: http://localhost:8000/api/documentation
 - **Tech Stack**: Laravel 11, JWT Auth, SQLite
 
 **Fitur:**
+
 - Authentication (Login/Logout/Register)
 - Manajemen Bahan Baku + Konversi
 - Manajemen Menu + Komposisi
@@ -102,10 +110,12 @@ npm run build
 - User Management (Super Admin)
 
 ### Web (Vite + React)
+
 - **URL**: http://localhost:5173
 - **Tech Stack**: Vite, React 18, TypeScript, TailwindCSS v4, Radix UI
 
 **Fitur:**
+
 - 8 Tema warna dengan light/dark mode
 - Dashboard dengan statistik
 - CRUD Bahan Baku & Menu
@@ -115,6 +125,7 @@ npm run build
 ## 🎨 Themes
 
 Aplikasi menyediakan 8 tema:
+
 - Blue Ocean
 - Ruby Red
 - Amber Minimal
@@ -154,6 +165,7 @@ npm run clean            # Clean all build artifacts
 ## 📝 Environment Variables
 
 ### API (.env)
+
 ```env
 APP_NAME="Kedai Bunda POS"
 APP_ENV=local
@@ -167,6 +179,7 @@ JWT_TTL=10080  # 7 days in minutes
 ```
 
 ### Web (.env)
+
 ```env
 VITE_API_URL=http://localhost:8000/api
 ```
@@ -176,10 +189,12 @@ VITE_API_URL=http://localhost:8000/api
 Setelah migration & seeding:
 
 **Super Admin:**
+
 - Email: `super@kedaibunda.com`
 - Password: `password`
 
 **Admin:**
+
 - Email: `admin@kedaibunda.com`
 - Password: `password`
 

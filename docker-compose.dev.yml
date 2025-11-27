@@ -1,0 +1,29 @@
+version: "3.8"
+
+# Development override - extends docker-compose.yml
+
+services:
+  # API with hot reload
+  api:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile.dev
+    volumes:
+      - ./apps/api:/var/www/html
+      - /var/www/html/vendor
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+
+  # Web with hot reload (using Vite dev server)
+  web:
+    build:
+      context: .
+      dockerfile: docker/web/Dockerfile.dev
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+    ports:
+      - "${WEB_PORT:-5173}:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000/api
