@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useTheme, type ThemeName } from "@/contexts/ThemeContext";
 import { useState } from "react";
 import { Palette, Search, Check, Sun, Moon, Sparkles, Grid3x3, List, Shuffle } from "lucide-react";
-import { themeCategories, getThemeDisplayName } from "../../public/themes/hook";
+import { themeCategories, getThemeDisplayName, themes } from "../../public/themes/hook";
 
 export function ThemeSettingsPage() {
   const { theme, variant, setTheme, setVariant } = useTheme();
@@ -15,13 +15,13 @@ export function ThemeSettingsPage() {
   const [isChanging, setIsChanging] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
-  // Get all themes from all categories
-  const allThemes = Object.values(themeCategories).flat();
+  // Get all themes from the themes array
+  const allThemes = [...themes];
 
   // Filter themes based on search and category
   const filteredThemes = allThemes.filter((themeName) => {
     const matchesSearch = themeName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === "all" || themeCategories[selectedCategory as keyof typeof themeCategories]?.includes(themeName);
+    const matchesCategory = selectedCategory === "all" || (themeCategories[selectedCategory as keyof typeof themeCategories] as readonly string[])?.includes(themeName);
     return matchesSearch && matchesCategory;
   });
 
@@ -37,7 +37,7 @@ export function ThemeSettingsPage() {
   // Random theme
   const handleRandomTheme = () => {
     const randomIndex = Math.floor(Math.random() * allThemes.length);
-    handleThemeChange(allThemes[randomIndex]);
+    handleThemeChange(allThemes[randomIndex] as ThemeName);
   };
 
   return (
@@ -141,7 +141,7 @@ export function ThemeSettingsPage() {
 
             if (viewMode === "list") {
               return (
-                <Card key={themeName} className={`cursor-pointer transition-all hover:shadow-lg ${isActive ? "border-primary border-2 bg-primary/5" : ""}`} onClick={() => handleThemeChange(themeName)}>
+                <Card key={themeName} className={`cursor-pointer transition-all hover:shadow-lg ${isActive ? "border-primary border-2 bg-primary/5" : ""}`} onClick={() => handleThemeChange(themeName as ThemeName)}>
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -152,8 +152,8 @@ export function ThemeSettingsPage() {
                           }}
                         />
                         <div>
-                          <h3 className="font-semibold text-foreground">{getThemeDisplayName(themeName)}</h3>
-                          <p className="text-xs text-muted-foreground capitalize">{Object.entries(themeCategories).find(([_, themes]) => themes.includes(themeName))?.[0] || "Other"}</p>
+                          <h3 className="font-semibold text-foreground">{getThemeDisplayName(themeName as ThemeName)}</h3>
+                          <p className="text-xs text-muted-foreground capitalize">{Object.entries(themeCategories).find(([, themeList]) => (themeList as readonly string[]).includes(themeName))?.[0] || "Other"}</p>
                         </div>
                       </div>
 
@@ -170,7 +170,7 @@ export function ThemeSettingsPage() {
             }
 
             return (
-              <Card key={themeName} className={`cursor-pointer transition-all hover:shadow-lg hover:scale-105 ${isActive ? "border-primary border-2 shadow-xl" : ""}`} onClick={() => handleThemeChange(themeName)}>
+              <Card key={themeName} className={`cursor-pointer transition-all hover:shadow-lg hover:scale-105 ${isActive ? "border-primary border-2 shadow-xl" : ""}`} onClick={() => handleThemeChange(themeName as ThemeName)}>
                 <CardContent className="p-4">
                   <div className="space-y-3">
                     {/* Color Preview */}
@@ -178,8 +178,8 @@ export function ThemeSettingsPage() {
 
                     {/* Theme Info */}
                     <div>
-                      <h3 className="font-semibold text-foreground line-clamp-1">{getThemeDisplayName(themeName)}</h3>
-                      <p className="text-xs text-muted-foreground capitalize mt-1">{Object.entries(themeCategories).find(([_, themes]) => themes.includes(themeName))?.[0] || "Other"}</p>
+                      <h3 className="font-semibold text-foreground line-clamp-1">{getThemeDisplayName(themeName as ThemeName)}</h3>
+                      <p className="text-xs text-muted-foreground capitalize mt-1">{Object.entries(themeCategories).find(([, themeList]) => (themeList as readonly string[]).includes(themeName))?.[0] || "Other"}</p>
                     </div>
 
                     {/* Active Badge */}
