@@ -7,11 +7,11 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY apps/web/package*.json ./
+# Copy package files from web app
+COPY apps/web/package.json ./
 
-# Install dependencies
-RUN npm ci --prefer-offline
+# Install dependencies using npm install (no lock file in subdirectory)
+RUN npm install --legacy-peer-deps
 
 # Copy source code
 COPY apps/web/ .
