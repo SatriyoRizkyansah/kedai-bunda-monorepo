@@ -36,18 +36,18 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # Frontend specific
-/apps/frontend/dist
-/apps/frontend/.vite
-/apps/frontend/coverage
+/apps/web/dist
+/apps/web/.vite
+/apps/web/coverage
 
 # Backend specific
-/apps/backend/vendor
-/apps/backend/node_modules
-/apps/backend/public/build
-/apps/backend/public/hot
-/apps/backend/storage/*.key
-/apps/backend/storage/pail
-/apps/backend/.phpunit.cache
+/apps/api/vendor
+/apps/api/node_modules
+/apps/api/public/build
+/apps/api/public/hot
+/apps/api/storage/*.key
+/apps/api/storage/pail
+/apps/api/.phpunit.cache
 
 # OS
 .DS_Store

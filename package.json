@@ -13,8 +13,8 @@
     "test": "turbo run test",
     "clean": "turbo run clean && rm -rf node_modules",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
-    "backend": "cd apps/backend && php artisan serve",
-    "frontend": "cd apps/frontend && npm run dev"
+    "api": "cd apps/api && php artisan serve",
+    "web": "cd apps/web && npm run dev"
   },
   "devDependencies": {
     "prettier": "^3.1.1",
