@@ -273,7 +273,7 @@ function BahanBakuTab() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nama Bahan</TableHead>
-                  <TableHead>Stok Tersedia</TableHead>
+
                   <TableHead className="text-right">Harga/Satuan</TableHead>
                   <TableHead className="text-center">Status</TableHead>
                   <TableHead className="text-center">Aksi</TableHead>
@@ -638,6 +638,10 @@ function KomposisiMenuTab() {
   const [formData, setFormData] = useState({ menu_id: "", bahan_baku_id: "", jumlah: "", satuan_id: "" });
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmTargetId, setConfirmTargetId] = useState<number | null>(null);
+
+  // State untuk inline add form di setiap menu card
+  const [addingToMenuId, setAddingToMenuId] = useState<number | null>(null);
+  const [inlineFormData, setInlineFormData] = useState({ bahan_baku_id: "", jumlah: "", satuan_id: "" });
   const [menuList, setMenuList] = useState<Menu[]>([]);
   const [bahanBakuList, setBahanBakuList] = useState<BahanBaku[]>([]);
   const [satuanList, setSatuanList] = useState<Satuan[]>([]);
@@ -652,6 +656,14 @@ function KomposisiMenuTab() {
   useEffect(() => {
     filterKomposisi();
   }, [searchQuery, groupedKomposisi]);
+
+  // Re-group when menuList changes to include empty menus
+  useEffect(() => {
+    if (menuList.length > 0) {
+      // Re-trigger grouping with current komposisi data
+      fetchKomposisi();
+    }
+  }, [menuList.length]);
 
   const fetchKomposisi = async () => {
     setLoading(true);
@@ -669,12 +681,20 @@ function KomposisiMenuTab() {
   const groupByMenu = (data: KomposisiMenu[]) => {
     const grouped: { [key: number]: GroupedKomposisi } = {};
 
+    // First, add all menus with their existing compositions
     data.forEach((item) => {
       if (!item.menu_id) return;
       if (!grouped[item.menu_id]) {
         grouped[item.menu_id] = { menu: item.menu!, komposisi: [] };
       }
       grouped[item.menu_id].komposisi.push(item);
+    });
+
+    // Then, add menus without any composition yet
+    menuList.forEach((menu) => {
+      if (!grouped[menu.id]) {
+        grouped[menu.id] = { menu: menu, komposisi: [] };
+      }
     });
 
     setGroupedKomposisi(Object.values(grouped));
@@ -795,6 +815,53 @@ function KomposisiMenuTab() {
     }));
   };
 
+  // Handler untuk inline form
+  const handleStartAddingToMenu = (menuId: number) => {
+    setAddingToMenuId(menuId);
+    setInlineFormData({ bahan_baku_id: "", jumlah: "", satuan_id: "" });
+  };
+
+  const handleCancelInlineAdd = () => {
+    setAddingToMenuId(null);
+    setInlineFormData({ bahan_baku_id: "", jumlah: "", satuan_id: "" });
+  };
+
+  const handleInlineBahanChange = (bahanId: string) => {
+    const selected = bahanBakuList.find((bahan) => bahan.id.toString() === bahanId);
+    setInlineFormData({
+      bahan_baku_id: bahanId,
+      jumlah: "",
+      satuan_id: selected?.satuan_id ? selected.satuan_id.toString() : "",
+    });
+  };
+
+  const handleInlineSubmit = async (menuId: number) => {
+    if (!inlineFormData.bahan_baku_id || !inlineFormData.jumlah) return;
+
+    try {
+      const payload: {
+        menu_id: number;
+        bahan_baku_id: number;
+        jumlah: number;
+        satuan_id?: number;
+      } = {
+        menu_id: menuId,
+        bahan_baku_id: parseInt(inlineFormData.bahan_baku_id, 10),
+        jumlah: parseFloat(inlineFormData.jumlah),
+      };
+
+      if (inlineFormData.satuan_id) {
+        payload.satuan_id = parseInt(inlineFormData.satuan_id, 10);
+      }
+
+      await api.post(`/komposisi-menu`, payload);
+      handleCancelInlineAdd();
+      fetchKomposisi();
+    } catch (err) {
+      console.error("Error saving inline komposisi:", err);
+    }
+  };
+
   // Helper: dapatkan nama bahan dari komposisi
   const getBahanNama = (item: KomposisiMenu) => {
     return item.bahan_baku?.nama || "-";
@@ -809,16 +876,12 @@ function KomposisiMenuTab() {
 
   return (
     <div className="space-y-4">
-      {/* Header & Search */}
+      {/* Header & Search - NO MORE GLOBAL ADD BUTTON */}
       <div className="flex flex-col sm:flex-row justify-between gap-4">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Cari menu..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
         </div>
-        <Button onClick={() => handleOpenDialog()} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Tambah Komposisi
-        </Button>
       </div>
 
       {/* Info Card */}
@@ -828,7 +891,7 @@ function KomposisiMenuTab() {
             <Layers className="h-5 w-5 text-primary mt-0.5" />
             <div>
               <h3 className="font-medium text-sm">Tentang Komposisi Menu</h3>
-              <p className="text-xs text-muted-foreground mt-1">Tetapkan bahan baku dan jumlah pemakaian secara manual. Satuan otomatis mengikuti stok bahan, tetapi bisa diganti jika resep memakai satuan lain.</p>
+              <p className="text-xs text-muted-foreground mt-1">Klik tombol "+ Tambah Bahan" di setiap menu untuk menambahkan komposisi. Satuan otomatis mengikuti stok bahan, tetapi bisa diganti jika resep memakai satuan lain.</p>
             </div>
           </div>
         </CardContent>
@@ -841,7 +904,8 @@ function KomposisiMenuTab() {
         <Card>
           <CardContent className="text-center py-12">
             <Layers className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">{searchQuery ? "Tidak ada menu ditemukan" : "Belum ada komposisi menu"}</p>
+            <p className="text-muted-foreground">{searchQuery ? "Tidak ada menu ditemukan" : "Belum ada menu tersedia"}</p>
+            <p className="text-xs text-muted-foreground mt-2">Tambahkan menu terlebih dahulu di halaman Menu</p>
           </CardContent>
         </Card>
       ) : (
@@ -855,7 +919,9 @@ function KomposisiMenuTab() {
                       {group.menu.nama}
                       <Badge variant="outline">{group.menu.kategori}</Badge>
                     </CardTitle>
-                    <CardDescription className="mt-1">{group.komposisi.length} bahan baku diperlukan</CardDescription>
+                    <CardDescription className="mt-1">
+                      {group.komposisi.length === 0 ? <span className="text-muted-foreground italic">Belum ada bahan baku</span> : <span>{group.komposisi.length} bahan baku diperlukan</span>}
+                    </CardDescription>
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-muted-foreground">Harga</p>
@@ -893,6 +959,85 @@ function KomposisiMenuTab() {
                         </TableCell>
                       </TableRow>
                     ))}
+
+                    {/* Inline Add Form Row */}
+                    {addingToMenuId === group.menu.id ? (
+                      <TableRow className="bg-blue-50/50 dark:bg-blue-900/10">
+                        <TableCell colSpan={3} className="py-4">
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-3 gap-3">
+                              {/* Select Bahan */}
+                              <div>
+                                <label className="text-xs font-medium mb-1 block">Bahan Baku</label>
+                                <select value={inlineFormData.bahan_baku_id} onChange={(e) => handleInlineBahanChange(e.target.value)} className="w-full px-2 py-1.5 text-sm rounded-md border border-input bg-background" required>
+                                  <option value="">Pilih bahan...</option>
+                                  {bahanBakuList
+                                    .filter((b) => !group.komposisi.some((k) => k.bahan_baku_id === b.id))
+                                    .map((bahan) => (
+                                      <option key={bahan.id} value={bahan.id}>
+                                        {bahan.nama}
+                                      </option>
+                                    ))}
+                                </select>
+                              </div>
+
+                              {/* Input Jumlah */}
+                              <div>
+                                <label className="text-xs font-medium mb-1 block">Jumlah</label>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0.01"
+                                  value={inlineFormData.jumlah}
+                                  onChange={(e) => setInlineFormData({ ...inlineFormData, jumlah: e.target.value })}
+                                  placeholder="0.00"
+                                  className="h-8 text-sm"
+                                  required
+                                />
+                              </div>
+
+                              {/* Select Satuan */}
+                              <div>
+                                <label className="text-xs font-medium mb-1 block">Satuan</label>
+                                <select
+                                  value={inlineFormData.satuan_id}
+                                  onChange={(e) => setInlineFormData({ ...inlineFormData, satuan_id: e.target.value })}
+                                  className="w-full px-2 py-1.5 text-sm rounded-md border border-input bg-background"
+                                  disabled={!inlineFormData.bahan_baku_id}
+                                >
+                                  <option value="">Satuan default</option>
+                                  {satuanList.map((satuan) => (
+                                    <option key={satuan.id} value={satuan.id}>
+                                      {satuan.nama}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-2 justify-end">
+                              <Button type="button" variant="outline" size="sm" onClick={handleCancelInlineAdd}>
+                                Batal
+                              </Button>
+                              <Button type="button" size="sm" onClick={() => handleInlineSubmit(group.menu.id)} disabled={!inlineFormData.bahan_baku_id || !inlineFormData.jumlah} className="bg-green-600 hover:bg-green-700">
+                                <Plus className="h-3 w-3 mr-1" />
+                                Simpan
+                              </Button>
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center py-3">
+                          <Button variant="outline" size="sm" onClick={() => handleStartAddingToMenu(group.menu.id)} className="gap-2">
+                            <Plus className="h-3 w-3" />
+                            Tambah Bahan
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>

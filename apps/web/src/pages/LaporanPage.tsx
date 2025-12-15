@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingScreen } from "@/components/LoadingScreen";
-import { TrendingUp, DollarSign, Package, ArrowUpCircle, ArrowDownCircle, Calendar, BarChart3, FileSpreadsheet } from "lucide-react";
+import { TrendingUp, DollarSign, Package, ArrowUpCircle, ArrowDownCircle, Calendar, BarChart3, FileSpreadsheet, ChevronRight } from "lucide-react";
 import * as XLSX from "xlsx";
 
 // Types
@@ -31,7 +31,18 @@ interface LaporanPenjualan {
   periode: { mulai: string; selesai: string };
   ringkasan: RingkasanPenjualan;
   per_kategori: PenjualanPerKategori[];
+  detail_menu: DetailMenuPenjualan[];
   transaksi: unknown[];
+}
+
+interface DetailMenuPenjualan {
+  menu_id: number;
+  nama: string;
+  kategori: string;
+  harga_jual: number;
+  total_terjual: number;
+  total_pendapatan: number;
+  jumlah_transaksi: number;
 }
 
 interface RingkasanStokLog {
@@ -171,6 +182,7 @@ export function LaporanPage() {
   const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("bulan_ini");
   const [customPeriod, setCustomPeriod] = useState(() => getPeriodDates("bulan_ini"));
   const [loading, setLoading] = useState(false);
+  const [expandedKategori, setExpandedKategori] = useState<number | null>(null);
 
   // Data states
   const [laporanPenjualan, setLaporanPenjualan] = useState<LaporanPenjualan | null>(null);
@@ -230,6 +242,11 @@ export function LaporanPage() {
     const kategoriData = laporanPenjualan.per_kategori.map((k) => [k.kategori, k.jumlah_transaksi, k.total_item, k.total_pendapatan]);
     const ws2 = XLSX.utils.aoa_to_sheet([kategoriHeader, ...kategoriData]);
     XLSX.utils.book_append_sheet(wb, ws2, "Per Kategori");
+
+    const menuHeader = ["Menu", "Kategori", "Harga Jual", "Total Terjual", "Jumlah Transaksi", "Total Pendapatan"];
+    const menuData = laporanPenjualan.detail_menu.map((m) => [m.nama, m.kategori, m.harga_jual, m.total_terjual, m.jumlah_transaksi, m.total_pendapatan]);
+    const ws3 = XLSX.utils.aoa_to_sheet([menuHeader, ...menuData]);
+    XLSX.utils.book_append_sheet(wb, ws3, "Detail Menu");
 
     XLSX.writeFile(wb, `Laporan_Penjualan_${currentPeriod.mulai}_${currentPeriod.selesai}.xlsx`);
   };
@@ -402,25 +419,66 @@ export function LaporanPage() {
                   </Card>
                 </div>
 
-                {/* Per Kategori */}
+                {/* Per Kategori dengan Detail Menu */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Penjualan per Kategori</CardTitle>
                   </CardHeader>
                   <CardContent>
                     {laporanPenjualan.per_kategori.length > 0 ? (
-                      <div className="space-y-3">
-                        {laporanPenjualan.per_kategori.map((kat, idx) => (
-                          <div key={idx} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                            <div>
-                              <p className="font-medium capitalize">{kat.kategori}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {formatNumber(kat.jumlah_transaksi)} transaksi • {formatNumber(kat.total_item)} item
-                              </p>
+                      <div className="space-y-2">
+                        {laporanPenjualan.per_kategori.map((kat, idx) => {
+                          // Filter menu untuk kategori ini
+                          const menuKategori = laporanPenjualan.detail_menu.filter((m) => m.kategori === kat.kategori);
+                          const isOpen = expandedKategori === idx;
+
+                          return (
+                            <div key={idx} className="border rounded-lg overflow-hidden">
+                              {/* Header Kategori - Collapsible */}
+                              <button onClick={() => setExpandedKategori(isOpen ? null : idx)} className="w-full flex items-center justify-between p-4 bg-muted/50 hover:bg-muted/70 transition-colors text-left">
+                                <div className="flex-1">
+                                  <p className="font-medium capitalize text-base">{kat.kategori}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {formatNumber(kat.jumlah_transaksi)} transaksi • {formatNumber(kat.total_item)} item
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                  <p className="font-semibold text-green-600">{formatCurrency(kat.total_pendapatan)}</p>
+                                  <ChevronRight className={`h-5 w-5 text-muted-foreground transition-transform ${isOpen ? "rotate-90" : ""}`} />
+                                </div>
+                              </button>
+
+                              {/* Detail Menu - Collapsible Content */}
+                              {isOpen && (
+                                <div className="p-4 bg-white dark:bg-slate-950 border-t space-y-2">
+                                  {menuKategori.length > 0 ? (
+                                    <div className="space-y-2">
+                                      <p className="text-xs font-medium text-muted-foreground uppercase mb-3">Menu dalam kategori ini:</p>
+                                      {menuKategori.map((menu) => (
+                                        <div key={menu.menu_id} className="flex items-center justify-between p-3 bg-muted/30 rounded-md">
+                                          <div className="flex-1 min-w-0">
+                                            <p className="font-medium text-sm truncate">{menu.nama}</p>
+                                            <div className="flex gap-3 text-xs text-muted-foreground mt-1">
+                                              <span>📦 {formatNumber(menu.total_terjual)} pcs</span>
+                                              <span>•</span>
+                                              <span>🛒 {formatNumber(menu.jumlah_transaksi)}x</span>
+                                            </div>
+                                          </div>
+                                          <div className="text-right ml-4 flex-shrink-0">
+                                            <p className="text-xs text-muted-foreground">@{formatCurrency(menu.harga_jual)}</p>
+                                            <p className="font-semibold text-green-600 text-sm">{formatCurrency(menu.total_pendapatan)}</p>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <p className="text-center text-muted-foreground text-sm py-4">Tidak ada menu dalam kategori ini</p>
+                                  )}
+                                </div>
+                              )}
                             </div>
-                            <p className="font-semibold text-green-600">{formatCurrency(kat.total_pendapatan)}</p>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : (
                       <p className="text-center text-muted-foreground py-8">Tidak ada data penjualan di periode ini</p>

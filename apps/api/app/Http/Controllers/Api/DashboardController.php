@@ -231,7 +231,7 @@ class DashboardController extends Controller
         $totalBayar = $transaksi->sum('bayar');
         $totalKembalian = $transaksi->sum('kembalian');
         
-        // Ringkasan per kategori
+        // Ringkasan per kategori dengan detail menu
         $penjualanPerKategori = DB::table('detail_transaksi')
             ->join('transaksi', 'detail_transaksi.transaksi_id', '=', 'transaksi.id')
             ->join('menu', 'detail_transaksi.menu_id', '=', 'menu.id')
@@ -247,6 +247,29 @@ class DashboardController extends Controller
                 DB::raw('SUM(detail_transaksi.subtotal) as total_pendapatan')
             )
             ->groupBy('menu.kategori')
+            ->get();
+
+        // Detail menu per kategori
+        $detailMenuPerKategori = DB::table('detail_transaksi')
+            ->join('transaksi', 'detail_transaksi.transaksi_id', '=', 'transaksi.id')
+            ->join('menu', 'detail_transaksi.menu_id', '=', 'menu.id')
+            ->whereBetween('transaksi.created_at', [
+                $tanggalMulai . ' 00:00:00',
+                $tanggalSelesai . ' 23:59:59'
+            ])
+            ->where('transaksi.status', 'selesai')
+            ->select(
+                'menu.id as menu_id',
+                'menu.nama',
+                'menu.kategori',
+                'menu.harga_jual',
+                DB::raw('SUM(detail_transaksi.jumlah) as total_terjual'),
+                DB::raw('SUM(detail_transaksi.subtotal) as total_pendapatan'),
+                DB::raw('COUNT(DISTINCT transaksi.id) as jumlah_transaksi')
+            )
+            ->groupBy('menu.id', 'menu.nama', 'menu.kategori', 'menu.harga_jual')
+            ->orderBy('menu.kategori', 'asc')
+            ->orderBy('total_pendapatan', 'desc')
             ->get();
 
         return response()->json([
@@ -265,6 +288,7 @@ class DashboardController extends Controller
                     'rata_rata_per_transaksi' => $totalTransaksi > 0 ? $totalPendapatan / $totalTransaksi : 0
                 ],
                 'per_kategori' => $penjualanPerKategori,
+                'detail_menu' => $detailMenuPerKategori,
                 'transaksi' => $transaksi
             ]
         ]);
