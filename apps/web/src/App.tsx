@@ -10,6 +10,7 @@ import { ThemeSettingsPage } from "./pages/ThemeSettingsPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { useGlobalThemeShortcut } from "./hooks/useGlobalThemeShortcut";
+import { Toaster } from "sonner";
 
 function AppRoutes() {
   // Enable global theme shortcut (Ctrl + Arrow Right)
@@ -86,6 +87,7 @@ function App() {
       <BrowserRouter>
         <AppRoutes />
       </BrowserRouter>
+      <Toaster richColors position="top-right" closeButton duration={3000} />
     </ThemeProvider>
   );
 }

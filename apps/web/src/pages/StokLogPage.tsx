@@ -10,6 +10,7 @@ import { LoadingScreen } from "../components/LoadingScreen";
 import { Search, ArrowUpCircle, ArrowDownCircle, AlertCircle, History, Plus, Minus } from "lucide-react";
 import api from "../lib/api";
 import type { StokLog, BahanBaku } from "../lib/types";
+import { notify } from "../lib/notify";
 
 interface StokStats {
   total_masuk: number;
@@ -55,7 +56,7 @@ export const StokLogPage = () => {
       calculateStats(logs);
     } catch (error) {
       console.error("Error fetching stok logs:", error);
-      alert("Gagal memuat data stok log");
+      notify.error("Gagal memuat data stok log");
     } finally {
       setLoading(false);
     }
@@ -97,7 +98,7 @@ export const StokLogPage = () => {
       fetchStokLogs();
     } catch (error: any) {
       console.error("Error:", error);
-      alert(error.response?.data?.pesan || "Gagal menyimpan data");
+      notify.error(error.response?.data?.pesan || "Gagal menyimpan data");
     }
   };
 

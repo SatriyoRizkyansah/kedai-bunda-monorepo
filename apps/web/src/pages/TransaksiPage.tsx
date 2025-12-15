@@ -11,11 +11,12 @@ import api from "@/lib/api";
 import type { Transaksi, Menu } from "@/lib/types";
 import { Plus, Minus, Search, Eye, XCircle, ShoppingCart, Calendar, DollarSign, Trash2, Banknote, Smartphone, UtensilsCrossed, Coffee, History, Receipt, Delete } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { notify } from "@/lib/notify";
 
 interface CartItem {
   menu_id: number;
   menu: Menu;
-  jumlah: number; 
+  jumlah: number;
 }
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -123,10 +124,16 @@ export function TransaksiPage() {
   };
 
   const handleSubmit = async () => {
-    if (cart.length === 0) return alert("Keranjang masih kosong!");
+    if (cart.length === 0) {
+      notify.warning("Keranjang masih kosong!");
+      return;
+    }
     const total = calculateTotal();
     const bayarNum = parseFloat(bayar);
-    if (metodePembayaran === "tunai" && (!bayarNum || bayarNum < total)) return alert("Pembayaran kurang!");
+    if (metodePembayaran === "tunai" && (!bayarNum || bayarNum < total)) {
+      notify.warning("Pembayaran kurang!");
+      return;
+    }
 
     try {
       const userStr = localStorage.getItem("user");
@@ -140,10 +147,10 @@ export function TransaksiPage() {
       });
       clearCart();
       fetchTransaksi();
-      alert("Transaksi berhasil!");
+      notify.success("Transaksi berhasil!");
     } catch (error: unknown) {
       const err = error as { response?: { data?: { pesan?: string } } };
-      alert(err.response?.data?.pesan || "Gagal menyimpan transaksi");
+      notify.error(err.response?.data?.pesan || "Gagal menyimpan transaksi");
     }
   };
 
@@ -152,9 +159,10 @@ export function TransaksiPage() {
     try {
       await api.post("/transaksi/" + id + "/batal");
       fetchTransaksi();
+      notify.success("Transaksi dibatalkan");
     } catch (error: unknown) {
       const err = error as { response?: { data?: { pesan?: string } } };
-      alert(err.response?.data?.pesan || "Gagal membatalkan transaksi");
+      notify.error(err.response?.data?.pesan || "Gagal membatalkan transaksi");
     }
   };
 

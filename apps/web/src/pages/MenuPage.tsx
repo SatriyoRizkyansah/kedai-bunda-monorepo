@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import type { Menu } from "@/lib/types";
 import { Plus, Search, Pencil, Trash2, UtensilsCrossed, PackagePlus, History, Link2, Unlink } from "lucide-react";
+import { notify } from "@/lib/notify";
 
 export function MenuPage() {
   const [menu, setMenu] = useState<Menu[]>([]);
@@ -133,15 +134,16 @@ export function MenuPage() {
     try {
       if (editingItem) {
         await api.put(`/menu/${editingItem.id}`, payload);
-        alert("Menu berhasil diupdate");
+        notify.success("Menu berhasil diupdate");
       } else {
         await api.post("/menu", payload);
-        alert("Menu berhasil ditambahkan");
+        notify.success("Menu berhasil ditambahkan");
       }
       handleCloseDialog();
       fetchMenu();
     } catch (error: any) {
       console.error("Error saving:", error);
+      notify.error(error?.response?.data?.pesan || "Gagal menyimpan menu");
     }
   };
 
