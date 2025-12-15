@@ -645,6 +645,7 @@ function KomposisiMenuTab() {
   const [menuList, setMenuList] = useState<Menu[]>([]);
   const [bahanBakuList, setBahanBakuList] = useState<BahanBaku[]>([]);
   const [satuanList, setSatuanList] = useState<Satuan[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     fetchKomposisi();
@@ -690,9 +691,10 @@ function KomposisiMenuTab() {
       grouped[item.menu_id].komposisi.push(item);
     });
 
-    // Then, add menus without any composition yet
+    // Then, add ONLY menus that are set to "Terhubung Bahan Baku" (kelola_stok_mandiri = false) without any composition yet
     menuList.forEach((menu) => {
-      if (!grouped[menu.id]) {
+      // HANYA tampilkan menu yang BUKAN manual stok (kelola_stok_mandiri = false)
+      if (!grouped[menu.id] && !menu.kelola_stok_mandiri) {
         grouped[menu.id] = { menu: menu, komposisi: [] };
       }
     });
@@ -773,11 +775,13 @@ function KomposisiMenuTab() {
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setEditingItem(null);
+    setErrorMessage(null);
     setFormData({ menu_id: "", bahan_baku_id: "", jumlah: "", satuan_id: "" });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
     try {
       const payload: {
         menu_id: number;
@@ -801,8 +805,10 @@ function KomposisiMenuTab() {
       }
       handleCloseDialog();
       fetchKomposisi();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error saving komposisi:", err);
+      const errorMsg = err?.response?.data?.pesan || err?.response?.data?.message || err?.message || "Gagal menyimpan komposisi";
+      setErrorMessage(errorMsg);
     }
   };
 
@@ -838,6 +844,7 @@ function KomposisiMenuTab() {
   const handleInlineSubmit = async (menuId: number) => {
     if (!inlineFormData.bahan_baku_id || !inlineFormData.jumlah) return;
 
+    setErrorMessage(null);
     try {
       const payload: {
         menu_id: number;
@@ -857,8 +864,10 @@ function KomposisiMenuTab() {
       await api.post(`/komposisi-menu`, payload);
       handleCancelInlineAdd();
       fetchKomposisi();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error saving inline komposisi:", err);
+      const errorMsg = err?.response?.data?.pesan || err?.response?.data?.message || err?.message || "Gagal menambahkan komposisi";
+      setErrorMessage(errorMsg);
     }
   };
 
@@ -965,6 +974,12 @@ function KomposisiMenuTab() {
                       <TableRow className="bg-blue-50/50 dark:bg-blue-900/10">
                         <TableCell colSpan={3} className="py-4">
                           <div className="space-y-3">
+                            {errorMessage && (
+                              <div className="bg-destructive/10 border border-destructive/30 text-destructive p-2 rounded-md flex gap-2 text-sm">
+                                <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                                <div>{errorMessage}</div>
+                              </div>
+                            )}
                             <div className="grid grid-cols-3 gap-3">
                               {/* Select Bahan */}
                               <div>
@@ -1053,6 +1068,12 @@ function KomposisiMenuTab() {
             <DialogTitle>{editingItem ? "Edit Komposisi" : "Tambah Komposisi"}</DialogTitle>
             <DialogDescription>Tentukan bahan baku dan jumlah yang dibutuhkan untuk menu ini</DialogDescription>
           </DialogHeader>
+          {errorMessage && (
+            <div className="bg-destructive/10 border border-destructive/30 text-destructive p-3 rounded-md flex gap-3">
+              <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+              <div className="text-sm">{errorMessage}</div>
+            </div>
+          )}
           <form onSubmit={handleSubmit}>
             <div className="space-y-4 py-4">
               {/* Step 1: Pilih Menu */}

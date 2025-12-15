@@ -129,6 +129,15 @@ class KomposisiMenuController extends Controller
             ], 422);
         }
 
+        // Check apakah menu adalah mode "Terhubung Bahan Baku" (kelola_stok_mandiri = false)
+        $menu = Menu::find($request->menu_id);
+        if ($menu && $menu->kelola_stok_mandiri) {
+            return response()->json([
+                'sukses' => false,
+                'pesan' => 'Komposisi hanya dapat ditambahkan untuk menu yang mode "Terhubung Bahan Baku". Menu ini dalam mode stok manual.'
+            ], 400);
+        }
+
         $existing = KomposisiMenu::where('menu_id', $request->menu_id)
             ->where('bahan_baku_id', $request->bahan_baku_id)
             ->first();
@@ -231,7 +240,15 @@ class KomposisiMenuController extends Controller
             ], 422);
         }
 
+        // Check apakah menu adalah mode "Terhubung Bahan Baku" (kelola_stok_mandiri = false)
         $menu = Menu::find($request->menu_id);
+        if ($menu && $menu->kelola_stok_mandiri) {
+            return response()->json([
+                'sukses' => false,
+                'pesan' => 'Komposisi hanya dapat ditambahkan untuk menu yang mode "Terhubung Bahan Baku". Menu ini dalam mode stok manual.'
+            ], 400);
+        }
+
         $komposisiList = [];
 
         foreach ($request->komposisi as $item) {
@@ -373,6 +390,15 @@ class KomposisiMenuController extends Controller
                 'sukses' => false,
                 'pesan' => 'Komposisi menu tidak ditemukan'
             ], 404);
+        }
+
+        // Check apakah menu adalah mode "Terhubung Bahan Baku" (kelola_stok_mandiri = false)
+        $menu = Menu::find($komposisi->menu_id);
+        if ($menu && $menu->kelola_stok_mandiri) {
+            return response()->json([
+                'sukses' => false,
+                'pesan' => 'Tidak dapat mengubah komposisi untuk menu yang mode stok manual.'
+            ], 400);
         }
 
         $validator = Validator::make($request->all(), [

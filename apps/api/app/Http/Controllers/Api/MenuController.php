@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\MenuResource;
 use App\Models\Menu;
 use App\Models\MenuStokLog;
+use App\Models\KomposisiMenu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -323,6 +324,13 @@ class MenuController extends Controller
                 'pesan' => 'Validasi gagal',
                 'errors' => $validator->errors()
             ], 422);
+        }
+
+        // Jika menu diubah dari "Terhubung Bahan Baku" (false) ke "Manual" (true), hapus semua komposisi
+        if ($request->has('kelola_stok_mandiri') && 
+            $request->kelola_stok_mandiri === true && 
+            $menu->kelola_stok_mandiri === false) {
+            KomposisiMenu::where('menu_id', $menu->id)->delete();
         }
 
         $menu->update($request->all());
