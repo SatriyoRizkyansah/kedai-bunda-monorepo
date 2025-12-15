@@ -60,7 +60,7 @@ class MenuController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Menu::with(['komposisiMenu.konversiBahan.bahanBaku', 'komposisiMenu.konversiBahan.satuan']);
+    $query = Menu::with(['komposisiMenu.bahanBaku.satuan', 'komposisiMenu.satuan']);
 
         // Filter berdasarkan kategori
         if ($request->has('kategori')) {
@@ -223,7 +223,7 @@ class MenuController extends Controller
      */
     public function show($id)
     {
-        $menu = Menu::with(['komposisiMenu.konversiBahan.bahanBaku', 'komposisiMenu.konversiBahan.satuan'])->find($id);
+    $menu = Menu::with(['komposisiMenu.bahanBaku.satuan', 'komposisiMenu.satuan'])->find($id);
 
         if (!$menu) {
             return response()->json([
@@ -432,7 +432,7 @@ class MenuController extends Controller
      */
     public function cekStok($id)
     {
-        $menu = Menu::with(['komposisiMenu.konversiBahan.bahanBaku', 'komposisiMenu.konversiBahan.satuan'])->find($id);
+    $menu = Menu::with(['komposisiMenu.bahanBaku.satuan', 'komposisiMenu.satuan'])->find($id);
 
         if (!$menu) {
             return response()->json([
@@ -445,26 +445,22 @@ class MenuController extends Controller
         $kekuranganBahan = [];
 
         foreach ($menu->komposisiMenu as $komposisi) {
-            $konversiBahan = $komposisi->konversiBahan;
-            if (!$konversiBahan || !$konversiBahan->bahanBaku) {
+                $bahanBaku = $komposisi->bahanBaku;
+                if (!$bahanBaku || $komposisi->jumlah <= 0) {
                 continue;
             }
             
-            $bahanBaku = $konversiBahan->bahanBaku;
-            $satuan = $konversiBahan->satuan;
-            
-            // Hitung kebutuhan dalam satuan dasar
-            // Misal: butuh 1 potong, 1 ekor = 9 potong, maka butuh 1/9 = 0.111 ekor
-            $kebutuhanDalamSatuanDasar = $komposisi->jumlah / $konversiBahan->jumlah_konversi;
-            
-            if ($bahanBaku->stok_tersedia < $kebutuhanDalamSatuanDasar) {
+                $satuan = $komposisi->satuan ?? $bahanBaku->satuan;
+                $kebutuhan = (float) $komposisi->jumlah;
+                $stokTersedia = (float) $bahanBaku->stok_tersedia;
+
+                if ($stokTersedia < $kebutuhan) {
                 $tersedia = false;
                 $kekuranganBahan[] = [
                     'bahan' => $bahanBaku->nama,
-                    'dibutuhkan' => round($kebutuhanDalamSatuanDasar, 4) . ' ' . $bahanBaku->satuan_dasar,
-                    'dibutuhkan_konversi' => $komposisi->jumlah . ' ' . ($satuan->nama ?? 'satuan'),
-                    'tersedia' => $bahanBaku->stok_tersedia . ' ' . $bahanBaku->satuan_dasar,
-                    'satuan_dasar' => $bahanBaku->satuan_dasar
+                        'dibutuhkan' => round($kebutuhan, 2) . ' ' . ($satuan?->nama ?? $bahanBaku->satuan?->nama ?? 'satuan'),
+                        'tersedia' => round($stokTersedia, 2) . ' ' . ($satuan?->nama ?? $bahanBaku->satuan?->nama ?? 'satuan'),
+                        'satuan' => $satuan?->nama ?? $bahanBaku->satuan?->nama ?? $bahanBaku->satuan_dasar,
                 ];
             }
         }
@@ -632,7 +628,7 @@ class MenuController extends Controller
      */
     public function getStokEfektif($id)
     {
-        $menu = Menu::with(['komposisiMenu.konversiBahan.bahanBaku', 'komposisiMenu.konversiBahan.satuan', 'satuan'])->find($id);
+    $menu = Menu::with(['komposisiMenu.bahanBaku.satuan', 'komposisiMenu.satuan', 'satuan'])->find($id);
 
         if (!$menu) {
             return response()->json([

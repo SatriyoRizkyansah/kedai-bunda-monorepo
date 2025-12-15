@@ -1079,6 +1079,97 @@
                 ]
             }
         },
+        "/api/laporan/stok-log": {
+            "get": {
+                "tags": [
+                    "Laporan"
+                ],
+                "summary": "Laporan riwayat stok masuk/keluar",
+                "operationId": "53007f418af3273860551787d90d6ebf",
+                "parameters": [
+                    {
+                        "name": "tanggal_mulai",
+                        "in": "query",
+                        "description": "Tanggal mulai periode (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "tanggal_selesai",
+                        "in": "query",
+                        "description": "Tanggal selesai periode (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "bahan_baku_id",
+                        "in": "query",
+                        "description": "Filter berdasarkan bahan baku",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Laporan stok log berhasil diambil"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/laporan/keuntungan": {
+            "get": {
+                "tags": [
+                    "Laporan"
+                ],
+                "summary": "Laporan keuntungan/laba rugi",
+                "operationId": "ab304285af5a58dec853a6b58168b2ed",
+                "parameters": [
+                    {
+                        "name": "tanggal_mulai",
+                        "in": "query",
+                        "description": "Tanggal mulai periode (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "tanggal_selesai",
+                        "in": "query",
+                        "description": "Tanggal selesai periode (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Laporan keuntungan berhasil diambil"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/komposisi-menu": {
             "get": {
                 "tags": [
@@ -1091,16 +1182,6 @@
                         "name": "menu_id",
                         "in": "query",
                         "description": "Filter berdasarkan ID menu",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "example": 1
-                        }
-                    },
-                    {
-                        "name": "bahan_baku_id",
-                        "in": "query",
-                        "description": "Filter berdasarkan ID bahan baku",
                         "required": false,
                         "schema": {
                             "type": "integer",
@@ -1135,7 +1216,7 @@
                                                         "type": "integer",
                                                         "example": 1
                                                     },
-                                                    "bahan_baku_id": {
+                                                    "konversi_bahan_id": {
                                                         "type": "integer",
                                                         "example": 1
                                                     },
@@ -1143,10 +1224,6 @@
                                                         "type": "number",
                                                         "format": "float",
                                                         "example": 0.2
-                                                    },
-                                                    "satuan": {
-                                                        "type": "string",
-                                                        "example": "kg"
                                                     }
                                                 },
                                                 "type": "object"
@@ -1179,16 +1256,15 @@
                             "schema": {
                                 "required": [
                                     "menu_id",
-                                    "bahan_baku_id",
-                                    "jumlah",
-                                    "satuan"
+                                    "konversi_bahan_id",
+                                    "jumlah"
                                 ],
                                 "properties": {
                                     "menu_id": {
                                         "type": "integer",
                                         "example": 1
                                     },
-                                    "bahan_baku_id": {
+                                    "konversi_bahan_id": {
                                         "type": "integer",
                                         "example": 1
                                     },
@@ -1196,10 +1272,6 @@
                                         "type": "number",
                                         "format": "float",
                                         "example": 0.2
-                                    },
-                                    "satuan": {
-                                        "type": "string",
-                                        "example": "kg"
                                     }
                                 },
                                 "type": "object"
@@ -1243,7 +1315,7 @@
                                         },
                                         "pesan": {
                                             "type": "string",
-                                            "example": "Bahan ini sudah ada di komposisi menu"
+                                            "example": "Konversi bahan ini sudah ada di komposisi menu"
                                         }
                                     },
                                     "type": "object"
@@ -1308,7 +1380,7 @@
                                         "type": "array",
                                         "items": {
                                             "properties": {
-                                                "bahan_baku_id": {
+                                                "konversi_bahan_id": {
                                                     "type": "integer",
                                                     "example": 1
                                                 },
@@ -1316,10 +1388,6 @@
                                                     "type": "number",
                                                     "format": "float",
                                                     "example": 0.2
-                                                },
-                                                "satuan": {
-                                                    "type": "string",
-                                                    "example": "kg"
                                                 }
                                             },
                                             "type": "object"
@@ -1492,14 +1560,14 @@
                         "application/json": {
                             "schema": {
                                 "properties": {
+                                    "konversi_bahan_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
                                     "jumlah": {
                                         "type": "number",
                                         "format": "float",
                                         "example": 0.3
-                                    },
-                                    "satuan": {
-                                        "type": "string",
-                                        "example": "kg"
                                     }
                                 },
                                 "type": "object"
@@ -3906,6 +3974,10 @@
         {
             "name": "Dashboard",
             "description": "Dashboard"
+        },
+        {
+            "name": "Laporan",
+            "description": "Laporan"
         },
         {
             "name": "Komposisi Menu",

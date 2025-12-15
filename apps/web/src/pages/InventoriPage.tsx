@@ -10,7 +10,7 @@ import { LoadingScreen } from "@/components/LoadingScreen";
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import type { BahanBaku, KonversiBahan, KomposisiMenu, Menu, Satuan } from "@/lib/types";
-import { Plus, Pencil, Trash2, Search, AlertCircle, Package, PackagePlus, PackageMinus, History, ArrowRightLeft, Layers } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, AlertCircle, Package, PackagePlus, PackageMinus, History, ArrowRightLeft, Layers, TrendingDown } from "lucide-react";
 
 // ===================== BAHAN BAKU TAB =====================
 function BahanBakuTab() {
@@ -24,6 +24,7 @@ function BahanBakuTab() {
   const [formData, setFormData] = useState({
     nama: "",
     satuan_id: "",
+    base_satuan_id: "",
     stok_tersedia: "",
     harga_per_satuan: "",
     keterangan: "",
@@ -34,13 +35,21 @@ function BahanBakuTab() {
   const [stokDialogOpen, setStokDialogOpen] = useState(false);
   const [stokDialogType, setStokDialogType] = useState<"tambah" | "kurang">("tambah");
   const [stokItem, setStokItem] = useState<BahanBaku | null>(null);
-  const [stokFormData, setStokFormData] = useState({ jumlah: "", keterangan: "" });
+  const [stokFormData, setStokFormData] = useState({
+    jumlah: "",
+    keterangan: "",
+    base_jumlah: "",
+    base_satuan_id: "",
+  });
 
   // State untuk histori stok
   const [historiDialogOpen, setHistoriDialogOpen] = useState(false);
   const [historiItem, setHistoriItem] = useState<BahanBaku | null>(null);
   const [stokLogs, setStokLogs] = useState<any[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
+
+  // State untuk tracking batch estimates
+  const [batchEstimates, setBatchEstimates] = useState<{ [key: number]: any }>({});
 
   // State untuk confirm delete
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -49,14 +58,29 @@ function BahanBakuTab() {
   useEffect(() => {
     fetchBahanBaku();
     fetchSatuan();
-    fetchKonversi();
+    fetchKonversi(); // Still fetch for template suggestions
   }, []);
 
   const fetchBahanBaku = async () => {
     setLoading(true);
     try {
       const response = await api.get("/bahan-baku");
-      setBahanBaku(response.data.data || []);
+      const data = response.data.data || [];
+      setBahanBaku(data);
+
+      // Fetch batch estimates untuk setiap bahan dengan tracking
+      const estimates: { [key: number]: any } = {};
+      for (const bahan of data) {
+        if (bahan.base_satuan_id) {
+          try {
+            const batchRes = await api.get(`/bahan-baku/${bahan.id}/batch-tracking`);
+            estimates[bahan.id] = batchRes.data.data?.summary || null;
+          } catch (err) {
+            console.error(`Error fetching batch for ${bahan.id}:`, err);
+          }
+        }
+      }
+      setBatchEstimates(estimates);
     } catch (error) {
       console.error("Error fetching bahan baku:", error);
     } finally {
@@ -86,27 +110,13 @@ function BahanBakuTab() {
 
   const isLowStock = (item: BahanBaku) => Number(item.stok_tersedia || 0) < 10;
 
-  // Helper: Hitung stok dalam satuan konversi
-  const getKonversiStok = (item: BahanBaku) => {
-    const konversiItem = konversiList.filter((k) => k.bahan_baku_id === item.id);
-    if (konversiItem.length === 0) return null;
-
-    // Ambil konversi pertama (biasanya yang paling umum dipakai)
-    return konversiItem.map((k) => {
-      const stokKonversi = Number(item.stok_tersedia) * Number(k.jumlah_konversi);
-      return {
-        jumlah: Math.floor(stokKonversi), // Bulatkan ke bawah
-        satuan: k.satuan?.nama || k.satuan?.singkatan || "",
-      };
-    });
-  };
-
   const handleOpenDialog = (item?: BahanBaku) => {
     if (item) {
       setEditingItem(item);
       setFormData({
         nama: item.nama,
         satuan_id: item.satuan_id?.toString() || "",
+        base_satuan_id: item.base_satuan_id?.toString() || "",
         stok_tersedia: item.stok_tersedia.toString(),
         harga_per_satuan: item.harga_per_satuan.toString(),
         keterangan: item.keterangan || "",
@@ -117,6 +127,7 @@ function BahanBakuTab() {
       setFormData({
         nama: "",
         satuan_id: "",
+        base_satuan_id: "",
         stok_tersedia: "0",
         harga_per_satuan: "0",
         keterangan: "",
@@ -133,7 +144,7 @@ function BahanBakuTab() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = {
+    const payload: any = {
       nama: formData.nama,
       satuan_id: parseInt(formData.satuan_id),
       stok_tersedia: parseFloat(formData.stok_tersedia),
@@ -141,6 +152,11 @@ function BahanBakuTab() {
       keterangan: formData.keterangan,
       aktif: formData.aktif,
     };
+
+    // Add base_satuan_id if selected (for tracking)
+    if (formData.base_satuan_id) {
+      payload.base_satuan_id = parseInt(formData.base_satuan_id);
+    }
 
     try {
       if (editingItem) {
@@ -176,7 +192,12 @@ function BahanBakuTab() {
   const handleOpenStokDialog = (item: BahanBaku, type: "tambah" | "kurang") => {
     setStokItem(item);
     setStokDialogType(type);
-    setStokFormData({ jumlah: "", keterangan: "" });
+    setStokFormData({
+      jumlah: "",
+      keterangan: "",
+      base_jumlah: "",
+      base_satuan_id: item.base_satuan_id?.toString() || "",
+    });
     setStokDialogOpen(true);
   };
 
@@ -186,11 +207,19 @@ function BahanBakuTab() {
 
     const endpoint = stokDialogType === "tambah" ? `/bahan-baku/${stokItem.id}/tambah-stok` : `/bahan-baku/${stokItem.id}/kurangi-stok`;
 
+    const payload: any = {
+      jumlah: parseFloat(stokFormData.jumlah),
+      keterangan: stokFormData.keterangan || `${stokDialogType === "tambah" ? "Penambahan" : "Pengurangan"} stok ${stokItem.nama}`,
+    };
+
+    // Add optional raw material tracking
+    if (stokFormData.base_jumlah && stokFormData.base_satuan_id) {
+      payload.base_jumlah = parseFloat(stokFormData.base_jumlah);
+      payload.base_satuan_id = parseInt(stokFormData.base_satuan_id);
+    }
+
     try {
-      await api.post(endpoint, {
-        jumlah: parseFloat(stokFormData.jumlah),
-        keterangan: stokFormData.keterangan || `${stokDialogType === "tambah" ? "Penambahan" : "Pengurangan"} stok ${stokItem.nama}`,
-      });
+      await api.post(endpoint, payload);
       setStokDialogOpen(false);
       setStokItem(null);
       fetchBahanBaku();
@@ -229,7 +258,6 @@ function BahanBakuTab() {
           Tambah Bahan Baku
         </Button>
       </div>
-
       {/* Table */}
       <Card>
         <CardContent className="p-0">
@@ -254,27 +282,18 @@ function BahanBakuTab() {
               <TableBody>
                 {filteredBahanBaku.map((item) => {
                   const lowStock = isLowStock(item);
-                  const konversiStok = getKonversiStok(item);
                   return (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">{item.nama}</TableCell>
                       <TableCell>
-                        <div className="space-y-1">
-                          {/* Stok utama dalam satuan dasar */}
-                          <div className={`font-semibold ${lowStock ? "text-destructive" : "text-foreground"}`}>
-                            {Math.floor(Number(item.stok_tersedia || 0))} {item.satuan?.nama || item.satuan_dasar}
-                          </div>
-                          {/* Stok dalam satuan konversi */}
-                          {konversiStok && konversiStok.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {konversiStok.map((k, idx) => (
-                                <Badge key={idx} variant="outline" className="text-xs font-normal text-muted-foreground">
-                                  ≈ {k.jumlah} {k.satuan}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
+                        <div className={`font-semibold ${lowStock ? "text-destructive" : "text-foreground"}`}>
+                          {Math.floor(Number(item.stok_tersedia || 0))} {item.satuan?.nama || item.satuan_dasar}
                         </div>
+                        {item.base_satuan_id && item.base_satuan && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            (dari {batchEstimates[item.id]?.estimated_base_remaining || "?"} {item.base_satuan.nama})
+                          </p>
+                        )}
                       </TableCell>
                       <TableCell className="text-right font-medium">Rp {Number(item.harga_per_satuan || 0).toLocaleString("id-ID")}</TableCell>
                       <TableCell className="text-center">
@@ -314,47 +333,88 @@ function BahanBakuTab() {
           )}
         </CardContent>
       </Card>
-
       {/* Dialog Form Bahan Baku */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingItem ? "Edit Bahan Baku" : "Tambah Bahan Baku"}</DialogTitle>
+            <DialogDescription>Atur satuan stok dan satuan pembelian untuk tracking yang lebih baik</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
+              {/* Nama Bahan */}
               <div className="grid gap-2">
                 <label className="text-sm font-medium">
                   Nama Bahan <span className="text-destructive">*</span>
                 </label>
-                <Input value={formData.nama} onChange={(e) => setFormData({ ...formData, nama: e.target.value })} placeholder="Contoh: Ayam Potong" required />
+                <Input value={formData.nama} onChange={(e) => setFormData({ ...formData, nama: e.target.value })} placeholder="Contoh: Ayam" required />
               </div>
+
+              {/* Info Box */}
+              <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                <CardContent className="p-3">
+                  <p className="text-xs text-blue-700 dark:text-blue-300">
+                    <strong>💡 Cara Kerja Satuan:</strong>
+                    <br />• <strong>Satuan Stok</strong> = Unit penyimpanan (contoh: Potong, Porsi, Gram)
+                    <br />• <strong>Satuan Beli</strong> = Unit pembelian mentah (contoh: Ekor, Kg, Liter) - Opsional
+                    <br />• Contoh: Stok Ayam dalam <strong>Potong</strong>, tapi beli dalam <strong>Ekor</strong>
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Satuan Stok */}
               <div className="grid gap-2">
                 <label className="text-sm font-medium">
-                  Satuan Dasar <span className="text-destructive">*</span>
+                  1. Satuan Stok (Unit Penyimpanan) <span className="text-destructive">*</span>
                 </label>
                 <select value={formData.satuan_id} onChange={(e) => setFormData({ ...formData, satuan_id: e.target.value })} className="w-full px-3 py-2 rounded-md border border-input bg-background" required>
-                  <option value="">-- Pilih satuan --</option>
+                  <option value="">-- Pilih satuan stok --</option>
                   {satuanList.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.nama} ({s.singkatan})
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-muted-foreground">Ini adalah satuan dasar untuk stok bahan baku (misal: ekor untuk ayam, kg untuk beras)</p>
+                <p className="text-xs text-muted-foreground">
+                  Unit untuk menyimpan stok. Contoh: Ayam = <strong>Potong</strong>, Nasi = <strong>Porsi</strong>, Bumbu = <strong>Gram</strong>
+                </p>
               </div>
+
+              {/* Satuan Beli (Base) - Optional */}
+              <div className="grid gap-2">
+                <label className="text-sm font-medium">2. Satuan Beli / Bahan Mentah (Opsional untuk Tracking)</label>
+                <select value={formData.base_satuan_id} onChange={(e) => setFormData({ ...formData, base_satuan_id: e.target.value })} className="w-full px-3 py-2 rounded-md border border-input bg-background">
+                  <option value="">-- Tidak perlu tracking bahan mentah --</option>
+                  {satuanList.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.nama} ({s.singkatan})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  Jika beda dengan satuan stok, pilih di sini. Contoh: Ayam stok <strong>Potong</strong> tapi beli <strong>Ekor</strong>
+                </p>
+                {formData.base_satuan_id && formData.satuan_id && formData.base_satuan_id !== formData.satuan_id && (
+                  <div className="text-xs bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 p-2 rounded-md border border-green-200 dark:border-green-800">
+                    ✓ Tracking aktif: Beli dalam {satuanList.find((s) => s.id === parseInt(formData.base_satuan_id))?.nama}, simpan dalam {satuanList.find((s) => s.id === parseInt(formData.satuan_id))?.nama}
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <label className="text-sm font-medium">
-                    Stok Tersedia <span className="text-destructive">*</span>
+                    Stok Awal <span className="text-destructive">*</span>
                   </label>
                   <Input type="number" step="0.01" min="0" value={formData.stok_tersedia} onChange={(e) => setFormData({ ...formData, stok_tersedia: e.target.value })} required />
+                  <p className="text-xs text-muted-foreground">Dalam satuan: {satuanList.find((s) => s.id === parseInt(formData.satuan_id))?.nama || "stok"}</p>
                 </div>
                 <div className="grid gap-2">
                   <label className="text-sm font-medium">
                     Harga/Satuan <span className="text-destructive">*</span>
                   </label>
                   <Input type="number" step="0.01" min="0" value={formData.harga_per_satuan} onChange={(e) => setFormData({ ...formData, harga_per_satuan: e.target.value })} required />
+                  <p className="text-xs text-muted-foreground">Per {satuanList.find((s) => s.id === parseInt(formData.satuan_id))?.nama || "satuan"}</p>
                 </div>
               </div>
               <div className="grid gap-2">
@@ -371,10 +431,9 @@ function BahanBakuTab() {
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* Dialog Tambah/Kurangi Stok */}
+      {/* Dialog Tambah/Kurangi Stok */} {/* Dialog Tambah/Kurangi Stok */}
       <Dialog open={stokDialogOpen} onOpenChange={setStokDialogOpen}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>{stokDialogType === "tambah" ? "Tambah Stok" : "Kurangi Stok"}</DialogTitle>
             <DialogDescription>
@@ -383,6 +442,45 @@ function BahanBakuTab() {
           </DialogHeader>
           <form onSubmit={handleStokSubmit}>
             <div className="grid gap-4 py-4">
+              {/* Optional: Raw material tracking (e.g., bought 2 ekor) */}
+              {stokDialogType === "tambah" && stokItem?.base_satuan_id && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800">
+                  <p className="text-xs font-medium text-blue-700 dark:text-blue-400 mb-2">📦 Tracking Bahan Mentah (Opsional)</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        value={stokFormData.base_jumlah}
+                        onChange={(e) => {
+                          setStokFormData({ ...stokFormData, base_jumlah: e.target.value });
+                          // Auto-suggest conversion if template exists
+                          const template = konversiList.find((k) => k.bahan_baku_id === stokItem.id);
+                          if (template && e.target.value) {
+                            const suggested = parseFloat(e.target.value) * Number(template.jumlah_konversi);
+                            if (!stokFormData.jumlah) {
+                              setStokFormData((prev) => ({ ...prev, jumlah: suggested.toFixed(2), base_jumlah: e.target.value }));
+                            }
+                          }
+                        }}
+                        placeholder={`Jumlah ${satuanList.find((s) => s.id === stokItem.base_satuan_id)?.nama || "bahan"}`}
+                        className="h-9"
+                      />
+                    </div>
+                    <div className="flex items-center text-xs text-muted-foreground">
+                      {satuanList.find((s) => s.id === stokItem.base_satuan_id)?.nama || "satuan"}
+                      {konversiList.find((k) => k.bahan_baku_id === stokItem.id) && (
+                        <span className="ml-1 text-blue-600 dark:text-blue-400">
+                          (≈ {konversiList.find((k) => k.bahan_baku_id === stokItem.id)?.jumlah_konversi} {stokItem.satuan?.nama})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1">Contoh: Beli 2 ekor, jadi berapa potong?</p>
+                </div>
+              )}
+
               <div className="grid gap-2">
                 <label className="text-sm font-medium">
                   Jumlah {stokDialogType === "tambah" ? "Tambah" : "Kurang"} <span className="text-destructive">*</span>
@@ -397,6 +495,7 @@ function BahanBakuTab() {
                   placeholder={`Jumlah dalam ${stokItem?.satuan?.nama || stokItem?.satuan_dasar || "satuan"}`}
                   required
                 />
+                <p className="text-xs text-muted-foreground">Jumlah final yang akan ditambahkan ke stok</p>
               </div>
               <div className="grid gap-2">
                 <label className="text-sm font-medium">Keterangan</label>
@@ -428,7 +527,6 @@ function BahanBakuTab() {
           </form>
         </DialogContent>
       </Dialog>
-
       {/* Dialog Histori Stok */}
       <Dialog open={historiDialogOpen} onOpenChange={setHistoriDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
@@ -473,9 +571,19 @@ function BahanBakuTab() {
                           {log.tipe === "masuk" ? "+" : "-"} {log.tipe}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {log.tipe === "masuk" ? "+" : "-"}
-                        {Number(log.jumlah).toFixed(2)}
+                      <TableCell className="text-right">
+                        <div className="space-y-1">
+                          <div className="font-medium">
+                            {log.tipe === "masuk" ? "+" : "-"}
+                            {Number(log.jumlah).toFixed(2)}
+                          </div>
+                          {/* Show raw material tracking if available */}
+                          {log.base_jumlah && log.base_satuan && (
+                            <div className="text-xs text-muted-foreground">
+                              📦 {Number(log.base_jumlah).toFixed(2)} {log.base_satuan.nama} → {Number(log.jumlah).toFixed(2)} {historiItem?.satuan?.nama || historiItem?.satuan_dasar}
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">{Number(log.stok_sesudah).toFixed(2)}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{log.keterangan || "-"}</TableCell>
@@ -492,7 +600,6 @@ function BahanBakuTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       {/* Dialog Konfirmasi Hapus */}
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent className="sm:max-w-[400px]">
@@ -528,16 +635,18 @@ function KomposisiMenuTab() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<KomposisiMenu | null>(null);
-  const [formData, setFormData] = useState({ menu_id: "", konversi_bahan_id: "", jumlah: "" });
+  const [formData, setFormData] = useState({ menu_id: "", bahan_baku_id: "", jumlah: "", satuan_id: "" });
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmTargetId, setConfirmTargetId] = useState<number | null>(null);
   const [menuList, setMenuList] = useState<Menu[]>([]);
-  const [konversiList, setKonversiList] = useState<KonversiBahan[]>([]);
+  const [bahanBakuList, setBahanBakuList] = useState<BahanBaku[]>([]);
+  const [satuanList, setSatuanList] = useState<Satuan[]>([]);
 
   useEffect(() => {
     fetchKomposisi();
     fetchMenus();
-    fetchKonversi();
+    fetchBahanBaku();
+    fetchSatuan();
   }, []);
 
   useEffect(() => {
@@ -589,12 +698,21 @@ function KomposisiMenuTab() {
     }
   };
 
-  const fetchKonversi = async () => {
+  const fetchBahanBaku = async () => {
     try {
-      const res = await api.get("/konversi-bahan");
-      setKonversiList(res.data.data || []);
+      const res = await api.get("/bahan-baku");
+      setBahanBakuList(res.data.data || []);
     } catch (err) {
-      console.error("Error fetching konversi", err);
+      console.error("Error fetching bahan baku", err);
+    }
+  };
+
+  const fetchSatuan = async () => {
+    try {
+      const res = await api.get("/satuan");
+      setSatuanList(res.data.data || []);
+    } catch (err) {
+      console.error("Error fetching satuan", err);
     }
   };
 
@@ -621,12 +739,13 @@ function KomposisiMenuTab() {
       setEditingItem(item);
       setFormData({
         menu_id: item.menu_id.toString(),
-        konversi_bahan_id: item.konversi_bahan_id?.toString() || "",
+        bahan_baku_id: item.bahan_baku_id.toString(),
         jumlah: item.jumlah.toString(),
+        satuan_id: item.satuan_id ? item.satuan_id.toString() : "",
       });
     } else {
       setEditingItem(null);
-      setFormData({ menu_id: "", konversi_bahan_id: "", jumlah: "" });
+      setFormData({ menu_id: "", bahan_baku_id: "", jumlah: "", satuan_id: "" });
     }
     setDialogOpen(true);
   };
@@ -634,17 +753,26 @@ function KomposisiMenuTab() {
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setEditingItem(null);
-    setFormData({ menu_id: "", konversi_bahan_id: "", jumlah: "" });
+    setFormData({ menu_id: "", bahan_baku_id: "", jumlah: "", satuan_id: "" });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const payload = {
-        menu_id: parseInt(formData.menu_id),
-        konversi_bahan_id: parseInt(formData.konversi_bahan_id),
+      const payload: {
+        menu_id: number;
+        bahan_baku_id: number;
+        jumlah: number;
+        satuan_id?: number;
+      } = {
+        menu_id: parseInt(formData.menu_id, 10),
+        bahan_baku_id: parseInt(formData.bahan_baku_id, 10),
         jumlah: parseFloat(formData.jumlah),
       };
+
+      if (formData.satuan_id) {
+        payload.satuan_id = parseInt(formData.satuan_id, 10);
+      }
 
       if (editingItem) {
         await api.put(`/komposisi-menu/${editingItem.id}`, payload);
@@ -658,22 +786,26 @@ function KomposisiMenuTab() {
     }
   };
 
-  // Helper: dapatkan nama bahan dari konversi
+  const handleBahanChange = (bahanId: string) => {
+    const selected = bahanBakuList.find((bahan) => bahan.id.toString() === bahanId);
+    setFormData((prev) => ({
+      ...prev,
+      bahan_baku_id: bahanId,
+      satuan_id: selected?.satuan_id ? selected.satuan_id.toString() : "",
+    }));
+  };
+
+  // Helper: dapatkan nama bahan dari komposisi
   const getBahanNama = (item: KomposisiMenu) => {
-    return item.konversi_bahan?.bahan_baku?.nama || item.bahan_baku?.nama || "-";
+    return item.bahan_baku?.nama || "-";
   };
 
   const getSatuanNama = (item: KomposisiMenu) => {
-    return item.konversi_bahan?.satuan?.nama || item.satuan?.nama || "-";
+    return item.satuan?.nama || item.bahan_baku?.satuan?.nama || item.bahan_baku?.satuan_dasar || "-";
   };
 
-  // Helper: dapatkan konversi yang dipilih
-  const getSelectedKonversi = () => {
-    if (!formData.konversi_bahan_id) return null;
-    return konversiList.find((k) => k.id.toString() === formData.konversi_bahan_id);
-  };
-
-  const selectedKonversi = getSelectedKonversi();
+  const selectedBahan = formData.bahan_baku_id ? bahanBakuList.find((bahan) => bahan.id.toString() === formData.bahan_baku_id) : undefined;
+  const selectedSatuan = formData.satuan_id ? satuanList.find((satuan) => satuan.id.toString() === formData.satuan_id) : selectedBahan?.satuan;
 
   return (
     <div className="space-y-4">
@@ -696,7 +828,7 @@ function KomposisiMenuTab() {
             <Layers className="h-5 w-5 text-primary mt-0.5" />
             <div>
               <h3 className="font-medium text-sm">Tentang Komposisi Menu</h3>
-              <p className="text-xs text-muted-foreground mt-1">Pilih bahan baku beserta satuannya dari daftar konversi yang sudah ada. Contoh: "Nasi Goreng" butuh 1 porsi Nasi, 1 potong Ayam.</p>
+              <p className="text-xs text-muted-foreground mt-1">Tetapkan bahan baku dan jumlah pemakaian secara manual. Satuan otomatis mengikuti stok bahan, tetapi bisa diganti jika resep memakai satuan lain.</p>
             </div>
           </div>
         </CardContent>
@@ -794,26 +926,38 @@ function KomposisiMenuTab() {
               </div>
 
               {/* Step 2: Pilih Bahan & Satuan */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  2. Pilih Bahan & Satuan <span className="text-destructive">*</span>
-                </label>
-                <select value={formData.konversi_bahan_id} onChange={(e) => setFormData({ ...formData, konversi_bahan_id: e.target.value })} className="w-full px-3 py-2 rounded-md border border-input bg-background" required>
-                  <option value="">-- Pilih bahan & satuan --</option>
-                  {konversiList.map((k) => (
-                    <option key={k.id} value={k.id}>
-                      {k.bahan_baku?.nama} → per {k.satuan?.nama}
-                    </option>
-                  ))}
-                </select>
-                {selectedKonversi && (
-                  <div className="text-xs bg-muted/50 p-2 rounded-md">
-                    <span className="font-medium">Info konversi:</span> 1 {selectedKonversi.bahan_baku?.satuan_dasar} {selectedKonversi.bahan_baku?.nama} = {selectedKonversi.jumlah_konversi} {selectedKonversi.satuan?.nama}
-                  </div>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  Tidak ada satuan yang cocok? Tambahkan di tab <span className="font-medium">"Konversi"</span>
-                </p>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    2a. Pilih Bahan Baku <span className="text-destructive">*</span>
+                  </label>
+                  <select value={formData.bahan_baku_id} onChange={(e) => handleBahanChange(e.target.value)} className="w-full px-3 py-2 rounded-md border border-input bg-background" required>
+                    <option value="">-- Pilih bahan baku --</option>
+                    {bahanBakuList.map((bahan) => (
+                      <option key={bahan.id} value={bahan.id}>
+                        {bahan.nama} ({bahan.satuan?.nama || bahan.satuan_dasar})
+                      </option>
+                    ))}
+                  </select>
+                  {selectedBahan && (
+                    <div className="text-xs bg-muted/50 p-2 rounded-md">
+                      <span className="font-medium">Satuan stok:</span> {selectedBahan.satuan?.nama || selectedBahan.satuan_dasar}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">2b. Pilih Satuan Pemakaian</label>
+                  <select value={formData.satuan_id} onChange={(e) => setFormData({ ...formData, satuan_id: e.target.value })} className="w-full px-3 py-2 rounded-md border border-input bg-background" disabled={!selectedBahan}>
+                    <option value="">{selectedBahan ? `Gunakan satuan bawaan (${selectedBahan.satuan?.nama || selectedBahan.satuan_dasar || "satuan"})` : "-- Pilih bahan baku terlebih dahulu --"}</option>
+                    {satuanList.map((satuan) => (
+                      <option key={satuan.id} value={satuan.id}>
+                        {satuan.nama} ({satuan.singkatan})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground">Biarkan kosong untuk memakai satuan stok bawaan bahan baku.</p>
+                </div>
               </div>
 
               {/* Step 3: Input Jumlah dengan satuan yang jelas */}
@@ -822,20 +966,20 @@ function KomposisiMenuTab() {
                   3. Jumlah yang Dibutuhkan <span className="text-destructive">*</span>
                 </label>
                 <div className="flex gap-2 items-center">
-                  <Input type="number" step="0.5" min="0.5" value={formData.jumlah} onChange={(e) => setFormData({ ...formData, jumlah: e.target.value })} placeholder="1" className="flex-1" required />
-                  {selectedKonversi && (
+                  <Input type="number" step="0.01" min="0.01" value={formData.jumlah} onChange={(e) => setFormData({ ...formData, jumlah: e.target.value })} placeholder="1" className="flex-1" required />
+                  {(selectedSatuan || selectedBahan) && (
                     <Badge variant="outline" className="px-3 py-2 text-sm whitespace-nowrap">
-                      {selectedKonversi.satuan?.nama}
+                      {selectedSatuan?.nama || selectedBahan?.satuan?.nama || selectedBahan?.satuan_dasar || "satuan"}
                     </Badge>
                   )}
                 </div>
-                {selectedKonversi && formData.jumlah && (
+                {selectedBahan && formData.jumlah && (
                   <div className="text-sm bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 p-3 rounded-md border border-green-200 dark:border-green-800">
                     <span className="font-medium">✓ Hasil:</span> Menu ini butuh{" "}
                     <span className="font-bold">
-                      {formData.jumlah} {selectedKonversi.satuan?.nama}
+                      {formData.jumlah} {selectedSatuan?.nama || selectedBahan.satuan?.nama || selectedBahan.satuan_dasar || "satuan"}
                     </span>{" "}
-                    {selectedKonversi.bahan_baku?.nama}
+                    {selectedBahan.nama}
                   </div>
                 )}
               </div>
@@ -1009,8 +1153,11 @@ function KonversiBahanTab() {
           <div className="flex items-start gap-3">
             <ArrowRightLeft className="h-5 w-5 text-primary mt-0.5" />
             <div>
-              <h3 className="font-medium text-sm">Tentang Konversi Bahan</h3>
-              <p className="text-xs text-muted-foreground mt-1">Konversi bahan digunakan untuk mengonversi satuan bahan baku ke satuan yang lebih kecil. Contoh: 1 ekor ayam = 8 potong, 1 kg nasi = 12 porsi</p>
+              <h3 className="font-medium text-sm">Tentang Template Konversi</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Template konversi adalah panduan/referensi untuk membantu input stok manual. Contoh: 1 ekor ayam ≈ 8 potong. Sistem <strong>tidak</strong> otomatis menghitung stok, tapi template ini akan memberi saran saat menambah stok.
+                Nilai konversi bisa berbeda tiap pembelian (misal: hari ini 1 ekor = 6 potong, besok = 8 potong).
+              </p>
             </div>
           </div>
         </CardContent>
@@ -1155,6 +1302,230 @@ function KonversiBahanTab() {
   );
 }
 
+// ===================== TRACKING BATCH TAB =====================
+function TrackingBatchTab() {
+  const [bahanBakuList, setBahanBakuList] = useState<BahanBaku[]>([]);
+  const [selectedBahan, setSelectedBahan] = useState<BahanBaku | null>(null);
+  const [batchData, setBatchData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadingBatch, setLoadingBatch] = useState(false);
+
+  useEffect(() => {
+    fetchBahanBaku();
+  }, []);
+
+  const fetchBahanBaku = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get("/bahan-baku");
+      const list = response.data.data || [];
+      // Filter hanya yang punya base_satuan_id (tracking enabled)
+      const withTracking = list.filter((b: BahanBaku) => b.base_satuan_id);
+      setBahanBakuList(withTracking);
+
+      // Auto-select first item
+      if (withTracking.length > 0) {
+        handleSelectBahan(withTracking[0]);
+      }
+    } catch (error) {
+      console.error("Error fetching bahan baku:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSelectBahan = async (bahan: BahanBaku) => {
+    setSelectedBahan(bahan);
+    setLoadingBatch(true);
+
+    try {
+      const response = await api.get(`/bahan-baku/${bahan.id}/batch-tracking`);
+      setBatchData(response.data.data);
+    } catch (error) {
+      console.error("Error fetching batch tracking:", error);
+      setBatchData(null);
+    } finally {
+      setLoadingBatch(false);
+    }
+  };
+
+  if (loading) {
+    return <LoadingScreen message="Memuat data tracking..." size="md" />;
+  }
+
+  if (bahanBakuList.length === 0) {
+    return (
+      <Card>
+        <CardContent className="text-center py-12">
+          <TrendingDown className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-muted-foreground">Belum ada bahan baku dengan tracking bahan mentah</p>
+          <p className="text-xs text-muted-foreground mt-2">Aktifkan tracking dengan menambah stok dan isi jumlah bahan mentah (misal: 2 ekor)</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Info Card */}
+      <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <TrendingDown className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+            <div>
+              <h3 className="font-medium text-sm text-blue-700 dark:text-blue-400">Tentang Tracking Batch FIFO</h3>
+              <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
+                Sistem melacak setiap pembelian bahan mentah (batch) dan menghitung sisa berdasarkan metode FIFO (First In First Out). Estimasi sisa bahan mentah dihitung proporsional dari stok yang tersisa di setiap batch.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Sidebar: Daftar Bahan Baku */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Bahan Baku dengan Tracking</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y">
+              {bahanBakuList.map((bahan) => (
+                <button key={bahan.id} onClick={() => handleSelectBahan(bahan)} className={`w-full text-left px-4 py-3 hover:bg-accent transition-colors ${selectedBahan?.id === bahan.id ? "bg-primary/10 border-l-4 border-primary" : ""}`}>
+                  <p className="font-medium text-sm">{bahan.nama}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Stok: {Math.floor(Number(bahan.stok_tersedia))} {bahan.satuan?.nama || bahan.satuan_dasar}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Main Content: Batch Detail & Summary */}
+        <div className="lg:col-span-2 space-y-4">
+          {loadingBatch ? (
+            <LoadingScreen message="Memuat detail batch..." size="md" />
+          ) : !batchData ? (
+            <Card>
+              <CardContent className="text-center py-12">
+                <p className="text-muted-foreground">Pilih bahan baku untuk melihat tracking</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              {/* Summary Cards */}
+              <div className="grid grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Stok Tersedia (Konversi)</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold">
+                      {Math.floor(Number(batchData.summary.total_converted_stock))} {batchData.bahan_baku.satuan?.nama || batchData.bahan_baku.satuan_dasar}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-green-700 dark:text-green-400">Estimasi Sisa Bahan Mentah</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                      {batchData.summary.estimated_base_remaining} {batchData.summary.base_satuan?.nama || "unit"}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {batchData.summary.active_batches} batch aktif dari {batchData.summary.total_batches} total
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Batch History Table */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Riwayat Batch Pembelian</CardTitle>
+                  <CardDescription>Batch diurutkan dari yang terbaru, pengurangan stok menggunakan metode FIFO (batch terlama dikurangi duluan)</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {batchData.batches.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground text-sm">Belum ada batch tercatat</p>
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tanggal</TableHead>
+                          <TableHead>Bahan Mentah</TableHead>
+                          <TableHead>Hasil Konversi</TableHead>
+                          <TableHead className="text-right">Sisa</TableHead>
+                          <TableHead className="text-center">Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {batchData.batches.map((batch: any) => {
+                          const isActive = batch.jumlah_sisa > 0;
+                          const percentRemaining = (batch.jumlah_sisa / batch.jumlah_awal) * 100;
+                          const estimatedBaseRemaining = batch.base_jumlah ? (batch.base_jumlah * (batch.jumlah_sisa / batch.jumlah_awal)).toFixed(2) : 0;
+
+                          return (
+                            <TableRow key={batch.id} className={!isActive ? "opacity-50" : ""}>
+                              <TableCell className="text-sm">
+                                {new Date(batch.created_at).toLocaleDateString("id-ID", {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                })}
+                              </TableCell>
+                              <TableCell>
+                                {batch.base_jumlah ? (
+                                  <div className="space-y-1">
+                                    <Badge variant="outline" className="font-mono">
+                                      {Number(batch.base_jumlah).toFixed(2)} {batch.base_satuan?.nama || "unit"}
+                                    </Badge>
+                                    {isActive && batch.base_jumlah && (
+                                      <p className="text-xs text-muted-foreground">
+                                        Sisa: ~{estimatedBaseRemaining} {batch.base_satuan?.nama || "unit"}
+                                      </p>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">-</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <div className="space-y-1">
+                                  <p className="font-medium">
+                                    {Number(batch.jumlah_awal).toFixed(2)} {batchData.bahan_baku.satuan?.nama || batchData.bahan_baku.satuan_dasar}
+                                  </p>
+                                  {batch.base_jumlah && batch.jumlah_awal > 0 && <p className="text-xs text-muted-foreground">Rasio: 1:{(batch.jumlah_awal / batch.base_jumlah).toFixed(2)}</p>}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="space-y-1">
+                                  <p className={`font-semibold ${isActive ? "text-foreground" : "text-muted-foreground"}`}>{Number(batch.jumlah_sisa).toFixed(2)}</p>
+                                  {isActive && <p className="text-xs text-muted-foreground">{percentRemaining.toFixed(0)}%</p>}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-center">{isActive ? <Badge className="bg-green-500 text-white hover:bg-green-600">Aktif</Badge> : <Badge variant="secondary">Habis</Badge>}</TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ===================== MAIN PAGE =====================
 export function InventoriPage() {
   return (
@@ -1163,15 +1534,19 @@ export function InventoriPage() {
         {/* Header */}
         <div>
           <h2 className="text-3xl font-bold text-foreground tracking-tight">Inventori</h2>
-          <p className="text-muted-foreground mt-2">Kelola bahan baku, komposisi menu, dan konversi satuan</p>
+          <p className="text-muted-foreground mt-2">Kelola bahan baku, tracking batch FIFO, komposisi menu, dan konversi satuan</p>
         </div>
 
         {/* Tabs */}
         <Tabs defaultValue="bahan-baku" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3 max-w-lg">
+          <TabsList className="grid w-full grid-cols-4 max-w-2xl">
             <TabsTrigger value="bahan-baku" className="gap-2">
               <Package className="h-4 w-4" />
               <span className="hidden sm:inline">Bahan Baku</span>
+            </TabsTrigger>
+            <TabsTrigger value="tracking" className="gap-2">
+              <TrendingDown className="h-4 w-4" />
+              <span className="hidden sm:inline">Tracking</span>
             </TabsTrigger>
             <TabsTrigger value="komposisi" className="gap-2">
               <Layers className="h-4 w-4" />
@@ -1185,6 +1560,10 @@ export function InventoriPage() {
 
           <TabsContent value="bahan-baku">
             <BahanBakuTab />
+          </TabsContent>
+
+          <TabsContent value="tracking">
+            <TrackingBatchTab />
           </TabsContent>
 
           <TabsContent value="komposisi">

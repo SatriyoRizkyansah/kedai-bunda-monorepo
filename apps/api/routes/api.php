@@ -51,6 +51,7 @@ Route::middleware(['auth:api'])->group(function () {
         Route::post('bahan-baku/{id}/tambah-stok', [BahanBakuController::class, 'tambahStok']);
         Route::post('bahan-baku/{id}/kurangi-stok', [BahanBakuController::class, 'kurangiStok']);
         Route::get('bahan-baku/{id}/stok-log', [BahanBakuController::class, 'stokLog']);
+        Route::get('bahan-baku/{id}/batch-tracking', [BahanBakuController::class, 'batchTracking']);
         
         // Konversi Bahan
         Route::apiResource('konversi-bahan', KonversiBahanController::class);

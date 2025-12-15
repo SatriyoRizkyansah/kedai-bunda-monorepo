@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\KomposisiMenu;
-use App\Models\KonversiBahan;
 use App\Models\Menu;
 use App\Models\BahanBaku;
 use Illuminate\Http\Request;
@@ -34,12 +33,13 @@ class KomposisiMenuController extends Controller
      *             @OA\Property(
      *                 property="data",
      *                 type="array",
-     *                 @OA\Items(
-     *                     @OA\Property(property="id", type="integer", example=1),
-     *                     @OA\Property(property="menu_id", type="integer", example=1),
-     *                     @OA\Property(property="konversi_bahan_id", type="integer", example=1),
-     *                     @OA\Property(property="jumlah", type="number", format="float", example=0.2)
-     *                 )
+    *                 @OA\Items(
+    *                     @OA\Property(property="id", type="integer", example=1),
+    *                     @OA\Property(property="menu_id", type="integer", example=1),
+    *                     @OA\Property(property="bahan_baku_id", type="integer", example=1),
+    *                     @OA\Property(property="satuan_id", type="integer", nullable=true, example=5),
+    *                     @OA\Property(property="jumlah", type="number", format="float", example=1)
+    *                 )
      *             )
      *         )
      *     )
@@ -49,7 +49,7 @@ class KomposisiMenuController extends Controller
      */
     public function index(Request $request)
     {
-        $query = KomposisiMenu::with(['menu', 'konversiBahan.bahanBaku', 'konversiBahan.satuan']);
+    $query = KomposisiMenu::with(['menu', 'bahanBaku.satuan', 'satuan']);
 
         // Filter berdasarkan menu
         if ($request->has('menu_id')) {
@@ -74,12 +74,13 @@ class KomposisiMenuController extends Controller
      *     @OA\RequestBody(
      *         required=true,
      *         description="Data komposisi menu baru",
-     *         @OA\JsonContent(
-     *             required={"menu_id", "konversi_bahan_id", "jumlah"},
-     *             @OA\Property(property="menu_id", type="integer", example=1),
-     *             @OA\Property(property="konversi_bahan_id", type="integer", example=1),
-     *             @OA\Property(property="jumlah", type="number", format="float", example=0.2)
-     *         )
+    *         @OA\JsonContent(
+    *             required={"menu_id", "bahan_baku_id", "jumlah"},
+    *             @OA\Property(property="menu_id", type="integer", example=1),
+    *             @OA\Property(property="bahan_baku_id", type="integer", example=5),
+    *             @OA\Property(property="satuan_id", type="integer", nullable=true, example=8),
+    *             @OA\Property(property="jumlah", type="number", format="float", example=1)
+    *         )
      *     ),
      *     @OA\Response(
      *         response=201,
@@ -93,10 +94,10 @@ class KomposisiMenuController extends Controller
      *     @OA\Response(
      *         response=400,
      *         description="Bahan sudah ada di komposisi",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="sukses", type="boolean", example=false),
-     *             @OA\Property(property="pesan", type="string", example="Konversi bahan ini sudah ada di komposisi menu")
-     *         )
+    *         @OA\JsonContent(
+    *             @OA\Property(property="sukses", type="boolean", example=false),
+    *             @OA\Property(property="pesan", type="string", example="Bahan baku ini sudah ada di komposisi menu")
+    *         )
      *     ),
      *     @OA\Response(
      *         response=422,
@@ -115,8 +116,9 @@ class KomposisiMenuController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'menu_id' => 'required|exists:menu,id',
-            'konversi_bahan_id' => 'required|exists:konversi_bahan,id',
+            'bahan_baku_id' => 'required|exists:bahan_baku,id',
             'jumlah' => 'required|numeric|min:0.01',
+            'satuan_id' => 'nullable|exists:satuan,id',
         ]);
 
         if ($validator->fails()) {
@@ -127,24 +129,38 @@ class KomposisiMenuController extends Controller
             ], 422);
         }
 
-        // Cek apakah konversi ini sudah ada di menu
         $existing = KomposisiMenu::where('menu_id', $request->menu_id)
-            ->where('konversi_bahan_id', $request->konversi_bahan_id)
+            ->where('bahan_baku_id', $request->bahan_baku_id)
             ->first();
 
         if ($existing) {
             return response()->json([
                 'sukses' => false,
-                'pesan' => 'Konversi bahan ini sudah ada di komposisi menu'
+                'pesan' => 'Bahan baku ini sudah ada di komposisi menu'
             ], 400);
         }
 
-        $komposisi = KomposisiMenu::create($request->all());
+        $bahanBaku = BahanBaku::with('satuan')->find($request->bahan_baku_id);
+        $satuanId = $request->satuan_id ?? $bahanBaku?->satuan_id;
+
+        if (!$satuanId) {
+            return response()->json([
+                'sukses' => false,
+                'pesan' => 'Bahan baku belum memiliki satuan stok, mohon lengkapi data bahan terlebih dahulu'
+            ], 422);
+        }
+
+        $komposisi = KomposisiMenu::create([
+            'menu_id' => $request->menu_id,
+            'bahan_baku_id' => $request->bahan_baku_id,
+            'satuan_id' => $satuanId,
+            'jumlah' => $request->jumlah,
+        ]);
 
         return response()->json([
             'sukses' => true,
             'pesan' => 'Komposisi menu berhasil ditambahkan',
-            'data' => $komposisi->load(['menu', 'konversiBahan.bahanBaku', 'konversiBahan.satuan'])
+            'data' => $komposisi->load(['menu', 'bahanBaku.satuan', 'satuan'])
         ], 201);
     }
 
@@ -202,8 +218,9 @@ class KomposisiMenuController extends Controller
         $validator = Validator::make($request->all(), [
             'menu_id' => 'required|exists:menu,id',
             'komposisi' => 'required|array|min:1',
-            'komposisi.*.konversi_bahan_id' => 'required|exists:konversi_bahan,id',
+            'komposisi.*.bahan_baku_id' => 'required|exists:bahan_baku,id',
             'komposisi.*.jumlah' => 'required|numeric|min:0.01',
+            'komposisi.*.satuan_id' => 'nullable|exists:satuan,id',
         ]);
 
         if ($validator->fails()) {
@@ -218,17 +235,29 @@ class KomposisiMenuController extends Controller
         $komposisiList = [];
 
         foreach ($request->komposisi as $item) {
+            $bahanId = $item['bahan_baku_id'];
+            $bahan = BahanBaku::with('satuan')->find($bahanId);
+            $satuanId = $item['satuan_id'] ?? $bahan?->satuan_id;
+
+            if (!$satuanId) {
+                return response()->json([
+                    'sukses' => false,
+                    'pesan' => 'Bahan baku belum memiliki satuan stok, mohon lengkapi data bahan terlebih dahulu'
+                ], 422);
+            }
+
             $komposisi = KomposisiMenu::updateOrCreate(
                 [
                     'menu_id' => $request->menu_id,
-                    'konversi_bahan_id' => $item['konversi_bahan_id']
+                    'bahan_baku_id' => $bahanId
                 ],
                 [
+                    'satuan_id' => $satuanId,
                     'jumlah' => $item['jumlah'],
                 ]
             );
 
-            $komposisiList[] = $komposisi->load(['konversiBahan.bahanBaku', 'konversiBahan.satuan']);
+            $komposisiList[] = $komposisi->load(['bahanBaku.satuan', 'satuan']);
         }
 
         return response()->json([
@@ -277,7 +306,7 @@ class KomposisiMenuController extends Controller
      */
     public function show($id)
     {
-        $komposisi = KomposisiMenu::with(['menu', 'konversiBahan.bahanBaku', 'konversiBahan.satuan'])->find($id);
+    $komposisi = KomposisiMenu::with(['menu', 'bahanBaku.satuan', 'satuan'])->find($id);
 
         if (!$komposisi) {
             return response()->json([
@@ -347,7 +376,8 @@ class KomposisiMenuController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'konversi_bahan_id' => 'sometimes|exists:konversi_bahan,id',
+            'bahan_baku_id' => 'sometimes|exists:bahan_baku,id',
+            'satuan_id' => 'sometimes|nullable|exists:satuan,id',
             'jumlah' => 'sometimes|numeric|min:0.01',
         ]);
 
@@ -359,12 +389,40 @@ class KomposisiMenuController extends Controller
             ], 422);
         }
 
-        $komposisi->update($request->all());
+        $data = $request->all();
+
+        if ($request->has('bahan_baku_id')) {
+            $duplicate = KomposisiMenu::where('menu_id', $komposisi->menu_id)
+                ->where('bahan_baku_id', $request->bahan_baku_id)
+                ->where('id', '!=', $komposisi->id)
+                ->exists();
+
+            if ($duplicate) {
+                return response()->json([
+                    'sukses' => false,
+                    'pesan' => 'Bahan baku ini sudah ada di komposisi menu'
+                ], 400);
+            }
+
+            $bahan = BahanBaku::with('satuan')->find($request->bahan_baku_id);
+            if (!$bahan) {
+                return response()->json([
+                    'sukses' => false,
+                    'pesan' => 'Bahan baku tidak ditemukan'
+                ], 404);
+            }
+
+            if (!$request->filled('satuan_id') && $bahan->satuan_id) {
+                $data['satuan_id'] = $bahan->satuan_id;
+            }
+        }
+
+        $komposisi->update($data);
 
         return response()->json([
             'sukses' => true,
             'pesan' => 'Komposisi menu berhasil diupdate',
-            'data' => $komposisi->load(['menu', 'konversiBahan.bahanBaku', 'konversiBahan.satuan'])
+            'data' => $komposisi->load(['menu', 'bahanBaku.satuan', 'satuan'])
         ]);
     }
 
