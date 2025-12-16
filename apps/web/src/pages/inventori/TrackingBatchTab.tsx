@@ -109,54 +109,109 @@ export function TrackingBatchTab() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-sm">Rincian Batch</CardTitle>
-            <p className="text-xs text-muted-foreground">Estimasi sisa dihitung proporsional dengan metode FIFO</p>
+            <div className="space-y-2 mt-3">
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Total Batch:</span>
+                <span className="font-medium">{batchData?.summary?.total_batches || 0} batch</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Stok Tersedia:</span>
+                <span className="font-medium">
+                  {selectedBahan?.stok_tersedia} {selectedBahan?.satuan?.nama || selectedBahan?.satuan_dasar}
+                </span>
+              </div>
+              {batchData?.summary?.estimated_base_remaining != null &&
+                (() => {
+                  const estBase = parseFloat(batchData.summary.estimated_base_remaining as any);
+                  // compute conversion rate from batches (jumlah per base)
+                  const totals = (batchData.batches || []).reduce(
+                    (acc: { totalJumlah: number; totalBase: number }, b: any) => {
+                      acc.totalJumlah += parseFloat(b.jumlah_awal || 0);
+                      acc.totalBase += parseFloat(b.base_jumlah || 0);
+                      return acc;
+                    },
+                    { totalJumlah: 0, totalBase: 0 }
+                  );
+
+                  const conversionRate = totals.totalBase > 0 ? totals.totalJumlah / totals.totalBase : selectedBahan?.satuan?.faktor_konversi || 1;
+                  const estimatedInConversion = estBase * conversionRate;
+                  const baseSatuanName = batchData.summary?.base_satuan?.nama || selectedBahan?.base_satuan?.nama || selectedBahan?.base_satuan?.singkatan;
+                  const convSatuanName = selectedBahan?.satuan?.nama || selectedBahan?.satuan_dasar;
+
+                  return (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Estimasi tersisa (base):</span>
+                      <span className="font-medium">
+                        {estBase.toFixed(2)} {baseSatuanName} (~{Math.round(estimatedInConversion)} {convSatuanName})
+                      </span>
+                    </div>
+                  );
+                })()}
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
             {loadingBatch ? (
               <LoadingScreen message="Memuat rincian batch..." size="sm" />
-            ) : !batchData ? (
+            ) : !batchData || !batchData.batches || batchData.batches.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground text-sm">Belum ada data batch</div>
             ) : (
               <div className="space-y-3">
-                {batchData.batch_details?.map((batch: any, index: number) => (
-                  <div key={batch.id || index} className="border rounded-lg p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium">Batch #{index + 1}</p>
-                        <p className="text-xs text-muted-foreground">Tanggal: {new Date(batch.tanggal_masuk).toLocaleDateString("id-ID")}</p>
+                {batchData.batches.map((batch: any, index: number) => {
+                  // Hitung jumlah terpakai
+                  const jumlahTerpakai = Math.max(0, parseFloat(batch.jumlah_awal) - parseFloat(batch.jumlah_sisa));
+                  // Satuan yang digunakan adalah satuan konversi (dari bahan_baku.satuan)
+                  const satuan = selectedBahan?.satuan?.nama || selectedBahan?.satuan?.singkatan || selectedBahan?.satuan_dasar;
+                  // Base satuan untuk konversi
+                  const baseSatuan = batch.base_satuan?.singkatan || selectedBahan?.base_satuan?.singkatan;
+                  const sisaBase = parseFloat(batch.base_jumlah);
+
+                  return (
+                    <div key={batch.id || index} className="border rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <p className="font-medium">Batch #{index + 1}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Tanggal: {new Date(batch.created_at).toLocaleDateString("id-ID")} ({sisaBase.toFixed(2)} {baseSatuan})
+                          </p>
+                        </div>
+                        <Badge variant="outline">
+                          {parseFloat(batch.jumlah_sisa).toFixed(0)} {satuan}
+                        </Badge>
                       </div>
-                      <Badge variant="outline">
-                        {batch.sisa} {batch.satuan?.nama || selectedBahan?.satuan?.nama || selectedBahan?.satuan_dasar}
-                      </Badge>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Jumlah Masuk</p>
+                          <p className="font-medium">
+                            {parseFloat(batch.jumlah_awal).toFixed(0)} {satuan}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Terpakai</p>
+                          <p className="font-medium">
+                            {jumlahTerpakai.toFixed(0)} {satuan}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Penyesuaian</p>
+                          <p className="font-medium">0 {satuan}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Sisa</p>
+                          <p className="font-medium">
+                            {parseFloat(batch.jumlah_sisa).toFixed(0)} {satuan}
+                          </p>
+                        </div>
+                      </div>
+                      {batch.keterangan && (
+                        <div className="mt-3 pt-3 border-t text-xs text-muted-foreground">
+                          <p>
+                            <span className="font-medium">Keterangan:</span> {batch.keterangan}
+                          </p>
+                        </div>
+                      )}
                     </div>
-                    <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                      <div>
-                        <p className="text-xs text-muted-foreground">Jumlah Masuk</p>
-                        <p className="font-medium">
-                          {batch.jumlah_masuk} {batch.satuan?.nama || selectedBahan?.satuan?.nama || selectedBahan?.satuan_dasar}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Terpakai</p>
-                        <p className="font-medium">
-                          {batch.jumlah_keluar} {batch.satuan?.nama || selectedBahan?.satuan?.nama || selectedBahan?.satuan_dasar}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Penyesuaian</p>
-                        <p className="font-medium">
-                          {batch.penyesuaian} {batch.satuan?.nama || selectedBahan?.satuan?.nama || selectedBahan?.satuan_dasar}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Sisa</p>
-                        <p className="font-medium">
-                          {batch.sisa} {batch.satuan?.nama || selectedBahan?.satuan?.nama || selectedBahan?.satuan_dasar}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
