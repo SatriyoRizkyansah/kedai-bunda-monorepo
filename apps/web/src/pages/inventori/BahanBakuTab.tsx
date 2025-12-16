@@ -256,6 +256,7 @@ export function BahanBakuTab() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nama Bahan</TableHead>
+                  <TableHead className="text-center">Stok</TableHead>
                   <TableHead className="text-right">Harga/Satuan</TableHead>
                   <TableHead className="text-center">Status</TableHead>
                   <TableHead className="text-center">Aksi</TableHead>
@@ -267,7 +268,7 @@ export function BahanBakuTab() {
                   return (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">{item.nama}</TableCell>
-                      <TableCell>
+                      <TableCell className="text-center">
                         <div className={`font-semibold ${lowStock ? "text-destructive" : "text-foreground"}`}>
                           {Math.floor(Number(item.stok_tersedia || 0))} {item.satuan?.nama || item.satuan_dasar}
                         </div>
