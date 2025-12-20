@@ -111,6 +111,7 @@ export function StokLogTab({ loading, laporan, period }: StokLogTabProps) {
                 <TableHead className="text-center text-green-600">Masuk</TableHead>
                 <TableHead className="text-center text-red-600">Keluar</TableHead>
                 <TableHead className="text-center">Selisih</TableHead>
+                <TableHead className="text-right">Nilai</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -129,11 +130,17 @@ export function StokLogTab({ loading, laporan, period }: StokLogTabProps) {
                         {formatNumber(b.selisih)}
                       </Badge>
                     </TableCell>
+                    <TableCell className="text-right">
+                      <div className="text-xs">
+                        <div className="text-green-600">Masuk: {formatCurrency(b.nilai_masuk)}</div>
+                        <div className="text-red-600">Keluar: {formatCurrency(b.nilai_keluar)}</div>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                     Tidak ada data
                   </TableCell>
                 </TableRow>
@@ -146,28 +153,63 @@ export function StokLogTab({ loading, laporan, period }: StokLogTabProps) {
       {/* Recent Logs */}
       <Card>
         <CardHeader>
-          <CardTitle>Riwayat Terbaru</CardTitle>
+          <CardTitle>Riwayat Stok Input (Detail per Batch)</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="max-h-[400px] overflow-y-auto">
+          <div className="max-h-[600px] overflow-y-auto">
             {laporan.logs.length > 0 ? (
               <div className="divide-y">
-                {laporan.logs.slice(0, 50).map((log) => (
-                  <div key={log.id} className="p-4 flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${log.tipe === "masuk" ? "bg-green-100 dark:bg-green-900/30" : "bg-red-100 dark:bg-red-900/30"}`}>
-                      {log.tipe === "masuk" ? <ArrowDownCircle className="h-4 w-4 text-green-600" /> : <ArrowUpCircle className="h-4 w-4 text-red-600" />}
+                {laporan.logs.slice(0, 100).map((log) => (
+                  <div key={log.id} className="p-4 hover:bg-muted/50 transition">
+                    {/* Header Row: Bahan, Tipe, Tanggal */}
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-base">{log.bahan_baku?.nama ?? "-"}</h4>
+                        <p className="text-xs text-muted-foreground">{log.keterangan || "Tanpa keterangan"}</p>
+                      </div>
+                      <div className="text-right">
+                        <Badge variant={log.tipe === "masuk" ? "default" : "destructive"} className={log.tipe === "masuk" ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-400" : ""}>
+                          {log.tipe === "masuk" ? "📥 Masuk" : "📤 Keluar"}
+                        </Badge>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{log.bahan_baku?.nama ?? "-"}</p>
-                      <p className="text-xs text-muted-foreground">{log.keterangan}</p>
+
+                    {/* Details Grid */}
+                    <div className="grid grid-cols-2 gap-3 mt-3 p-3 bg-muted/30 rounded-lg">
+                      {/* Jumlah Stok */}
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase">Jumlah</p>
+                        <p className="text-sm font-semibold">
+                          {log.tipe === "masuk" ? "+" : "-"}
+                          {formatNumber(log.jumlah)} {log.bahan_baku?.satuan_dasar}
+                        </p>
+                      </div>
+
+                      {/* Tanggal */}
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase">Tanggal</p>
+                        <p className="text-sm">{formatDateTime(log.created_at)}</p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className={`font-medium ${log.tipe === "masuk" ? "text-green-600" : "text-red-600"}`}>
-                        {log.tipe === "masuk" ? "+" : "-"}
-                        {formatNumber(log.jumlah)} {log.bahan_baku?.satuan_dasar}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{formatDateTime(log.created_at)}</p>
-                    </div>
+
+                    {/* Harga Batch - Show only if present */}
+                    {log.harga_beli ? (
+                      <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                        <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mb-2">💰 Harga Batch</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <p className="text-xs text-amber-600 dark:text-amber-400">Total Harga</p>
+                            <p className="text-sm font-bold text-amber-700 dark:text-amber-300">{formatCurrency(log.harga_beli)}</p>
+                          </div>
+                          {/* <div>
+                            <p className="text-xs text-amber-600 dark:text-amber-400">Per Unit</p>
+                            <p className="text-sm font-bold text-amber-700 dark:text-amber-300">{log.jumlah > 0 ? formatCurrency(log.harga_beli / log.jumlah) : "-"}</p>
+                          </div> */}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-900/20 rounded-lg text-xs text-muted-foreground italic">(Tanpa harga input)</div>
+                    )}
                   </div>
                 ))}
               </div>

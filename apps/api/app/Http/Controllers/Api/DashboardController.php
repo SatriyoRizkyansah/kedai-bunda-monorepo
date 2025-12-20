@@ -417,6 +417,7 @@ class DashboardController extends Controller
         $bahanBakuId = $request->input('bahan_baku_id');
         
         $query = StokLog::with(['bahanBaku', 'user'])
+            ->select('stok_log.*')
             ->whereBetween('created_at', [
                 $tanggalMulai . ' 00:00:00',
                 $tanggalSelesai . ' 23:59:59'
@@ -428,25 +429,36 @@ class DashboardController extends Controller
         
         $stokLogs = $query->orderBy('created_at', 'desc')->get();
         
-        // Ringkasan stok masuk
+        // Ringkasan stok masuk - gunakan harga_beli jika ada, jika tidak gunakan harga_per_satuan
         $stokMasuk = $stokLogs->where('tipe', 'masuk');
         $totalStokMasuk = $stokMasuk->sum('jumlah');
         $nilaiStokMasuk = $stokMasuk->sum(function($log) {
-            return $log->jumlah * ($log->bahanBaku->harga_per_satuan ?? 0);
+            // Gunakan harga_beli jika ada (ini adalah total harga untuk batch)
+            return $log->harga_beli ?? 0;
         });
         
-        // Ringkasan stok keluar
+        // Ringkasan stok keluar - gunakan harga_beli jika ada, jika tidak gunakan harga_per_satuan
         $stokKeluar = $stokLogs->where('tipe', 'keluar');
         $totalStokKeluar = $stokKeluar->sum('jumlah');
         $nilaiStokKeluar = $stokKeluar->sum(function($log) {
-            return $log->jumlah * ($log->bahanBaku->harga_per_satuan ?? 0);
+            // Gunakan harga_beli jika ada (ini adalah total harga untuk batch)
+            return $log->harga_beli ?? 0;
         });
         
-        // Group by bahan baku
+        // Group by bahan baku dengan detail per batch/log
         $perBahanBaku = $stokLogs->groupBy('bahan_baku_id')->map(function($logs) {
             $bahanBaku = $logs->first()->bahanBaku;
             $masuk = $logs->where('tipe', 'masuk')->sum('jumlah');
             $keluar = $logs->where('tipe', 'keluar')->sum('jumlah');
+            
+            // Hitung nilai dengan harga_beli (total harga batch)
+            $nilaiMasuk = $logs->where('tipe', 'masuk')->sum(function($log) {
+                return $log->harga_beli ?? 0;
+            });
+            
+            $nilaiKeluar = $logs->where('tipe', 'keluar')->sum(function($log) {
+                return $log->harga_beli ?? 0;
+            });
             
             return [
                 'bahan_baku_id' => $bahanBaku->id,
@@ -455,8 +467,8 @@ class DashboardController extends Controller
                 'stok_masuk' => $masuk,
                 'stok_keluar' => $keluar,
                 'selisih' => $masuk - $keluar,
-                'nilai_masuk' => $masuk * ($bahanBaku->harga_per_satuan ?? 0),
-                'nilai_keluar' => $keluar * ($bahanBaku->harga_per_satuan ?? 0),
+                'nilai_masuk' => $nilaiMasuk,
+                'nilai_keluar' => $nilaiKeluar,
             ];
         })->values();
         

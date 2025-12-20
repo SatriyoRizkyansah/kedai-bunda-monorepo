@@ -21,6 +21,7 @@ class StokLog extends Model
         'referensi',
         'keterangan',
         'konversi_bahan_id',
+        'harga_beli',
     ];
 
     protected $casts = [
@@ -28,6 +29,7 @@ class StokLog extends Model
         'base_jumlah' => 'decimal:2',
         'stok_sebelum' => 'decimal:2',
         'stok_sesudah' => 'decimal:2',
+        'harga_beli' => 'decimal:2',
     ];
 
     /**

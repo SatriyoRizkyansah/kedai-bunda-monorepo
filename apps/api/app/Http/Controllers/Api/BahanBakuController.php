@@ -408,7 +408,7 @@ class BahanBakuController extends Controller
 
         DB::beginTransaction();
         try {
-            // Log stok entry
+            // Log stok entry dengan harga_beli
             $log = $bahanBaku->tambahStok(
                 $request->jumlah,
                 $request->user()->id,
@@ -416,7 +416,8 @@ class BahanBakuController extends Controller
                 null,
                 $request->base_jumlah,
                 $request->base_satuan_id ?? $bahanBaku->base_satuan_id,
-                $request->konversi_bahan_id
+                $request->konversi_bahan_id,
+                $request->harga_beli
             );
 
             // Create batch for FIFO tracking (if base tracking provided)
@@ -472,6 +473,7 @@ class BahanBakuController extends Controller
             'base_jumlah' => 'nullable|numeric|min:0.01',
             'base_satuan_id' => 'nullable|exists:satuan,id',
             'konversi_bahan_id' => 'nullable|exists:konversi_bahan,id',
+            'harga_beli' => 'nullable|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -491,7 +493,7 @@ class BahanBakuController extends Controller
 
         DB::beginTransaction();
         try {
-            // Log stok reduction
+            // Log stok reduction dengan harga_beli
             $log = $bahanBaku->kurangiStok(
                 $request->jumlah,
                 $request->user()->id,
@@ -499,7 +501,8 @@ class BahanBakuController extends Controller
                 null,
                 $request->base_jumlah,
                 $request->base_satuan_id ?? $bahanBaku->base_satuan_id,
-                $request->konversi_bahan_id
+                $request->konversi_bahan_id,
+                $request->harga_beli
             );
 
             // Apply FIFO: reduce from oldest batches first

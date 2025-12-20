@@ -106,7 +106,8 @@ class BahanBaku extends Model
         ?string $referensi = null,
         ?float $baseJumlah = null,
         ?int $baseSatuanId = null,
-        ?int $konversiBahanId = null
+        ?int $konversiBahanId = null,
+        ?float $hargaBeli = null
     ): StokLog
     {
         $stokSebelum = $this->stok_tersedia;
@@ -125,6 +126,7 @@ class BahanBaku extends Model
             'base_jumlah' => $baseJumlah,
             'base_satuan_id' => $baseSatuanId,
             'konversi_bahan_id' => $konversiBahanId,
+            'harga_beli' => $hargaBeli,
         ]);
     }
 
@@ -138,7 +140,8 @@ class BahanBaku extends Model
         ?string $referensi = null,
         ?float $baseJumlah = null,
         ?int $baseSatuanId = null,
-        ?int $konversiBahanId = null
+        ?int $konversiBahanId = null,
+        ?float $hargaBeli = null
     ): StokLog
     {
         $stokSebelum = $this->stok_tersedia;
@@ -160,6 +163,7 @@ class BahanBaku extends Model
             'base_jumlah' => $baseJumlah,
             'base_satuan_id' => $baseSatuanId,
             'konversi_bahan_id' => $konversiBahanId,
+            'harga_beli' => $hargaBeli,
         ]);
     }
 

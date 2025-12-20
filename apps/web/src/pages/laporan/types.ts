@@ -64,6 +64,7 @@ export interface StokLogItem {
   jumlah: number;
   tipe: "masuk" | "keluar";
   keterangan: string;
+  harga_beli?: number;
   created_at: string;
   bahan_baku: { nama: string; satuan_dasar: string };
   user?: { name: string };
