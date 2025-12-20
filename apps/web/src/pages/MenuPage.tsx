@@ -31,9 +31,7 @@ export function MenuPage() {
   // Stok dialog states
   const [stokDialogOpen, setStokDialogOpen] = useState(false);
   const [stokItem, setStokItem] = useState<Menu | null>(null);
-  const [stokFormData, setStokFormData] = useState<StokFormData>(
-    INITIAL_STOK_FORM
-  );
+  const [stokFormData, setStokFormData] = useState<StokFormData>(INITIAL_STOK_FORM);
   const [stokLoading, setStokLoading] = useState(false);
 
   // History dialog states
@@ -66,11 +64,8 @@ export function MenuPage() {
   const kategoris = ["semua", ...Array.from(new Set(menu.map((m) => m.kategori)))];
 
   const filteredMenu = menu.filter((item) => {
-    const matchSearch = item.nama
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    const matchKategori =
-      selectedKategori === "semua" || item.kategori === selectedKategori;
+    const matchSearch = item.nama.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchKategori = selectedKategori === "semua" || item.kategori === selectedKategori;
     return matchSearch && matchKategori;
   });
 
@@ -148,12 +143,16 @@ export function MenuPage() {
 
     setStokLoading(true);
     try {
-      await api.post(`/menu/${stokItem.id}/tambah-stok`, {
+      const payload: any = {
         jumlah: parseFloat(stokFormData.jumlah),
-        keterangan:
-          stokFormData.keterangan ||
-          `Penambahan stok ${stokItem.nama}`,
-      });
+        keterangan: stokFormData.keterangan || `Penambahan stok ${stokItem.nama}`,
+      };
+
+      if (stokFormData.harga_beli) {
+        payload.harga_beli = parseFloat(stokFormData.harga_beli);
+      }
+
+      await api.post(`/menu/${stokItem.id}/tambah-stok`, payload);
       setStokDialogOpen(false);
       setStokItem(null);
       setStokFormData(INITIAL_STOK_FORM);
@@ -215,12 +214,8 @@ export function MenuPage() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h2 className="text-3xl font-bold text-foreground tracking-tight">
-              Menu
-            </h2>
-            <p className="text-muted-foreground mt-2">
-              Kelola menu makanan dan minuman
-            </p>
+            <h2 className="text-3xl font-bold text-foreground tracking-tight">Menu</h2>
+            <p className="text-muted-foreground mt-2">Kelola menu makanan dan minuman</p>
           </div>
           <Button
             onClick={() => handleOpenDialog()}
@@ -235,13 +230,7 @@ export function MenuPage() {
         </div>
 
         {/* Filters */}
-        <MenuFilters
-          searchTerm={searchTerm}
-          selectedKategori={selectedKategori}
-          kategoris={kategoris}
-          onSearchChange={setSearchTerm}
-          onKategoriChange={setSelectedKategori}
-        />
+        <MenuFilters searchTerm={searchTerm} selectedKategori={selectedKategori} kategoris={kategoris} onSearchChange={setSearchTerm} onKategoriChange={setSelectedKategori} />
 
         {/* Menu Grid */}
         {loading ? (
@@ -249,62 +238,24 @@ export function MenuPage() {
         ) : filteredMenu.length === 0 ? (
           <div className="text-center py-12">
             <UtensilsCrossed className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">
-              {searchTerm
-                ? "Tidak ada hasil pencarian"
-                : "Belum ada menu tersedia"}
-            </p>
+            <p className="text-muted-foreground">{searchTerm ? "Tidak ada hasil pencarian" : "Belum ada menu tersedia"}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredMenu.map((item) => (
-              <MenuCard
-                key={item.id}
-                item={item}
-                onAddStok={handleOpenStokDialog}
-                onViewHistory={handleOpenHistori}
-                onEdit={handleOpenDialog}
-                onDelete={handleDelete}
-              />
+              <MenuCard key={item.id} item={item} onAddStok={handleOpenStokDialog} onViewHistory={handleOpenHistori} onEdit={handleOpenDialog} onDelete={handleDelete} />
             ))}
           </div>
         )}
 
         {/* Dialogs */}
-        <MenuDialog
-          open={dialogOpen}
-          editingItem={editingItem}
-          formData={formData}
-          onFormDataChange={setFormData}
-          onSubmit={handleSubmit}
-          onOpenChange={handleCloseDialog}
-          isLoading={formLoading}
-        />
+        <MenuDialog open={dialogOpen} editingItem={editingItem} formData={formData} onFormDataChange={setFormData} onSubmit={handleSubmit} onOpenChange={handleCloseDialog} isLoading={formLoading} />
 
-        <StokMenuDialog
-          open={stokDialogOpen}
-          stokItem={stokItem}
-          formData={stokFormData}
-          onFormDataChange={setStokFormData}
-          onSubmit={handleTambahStok}
-          onOpenChange={() => setStokDialogOpen(false)}
-          isLoading={stokLoading}
-        />
+        <StokMenuDialog open={stokDialogOpen} stokItem={stokItem} formData={stokFormData} onFormDataChange={setStokFormData} onSubmit={handleTambahStok} onOpenChange={() => setStokDialogOpen(false)} isLoading={stokLoading} />
 
-        <HistoriStokDialog
-          open={historiDialogOpen}
-          historiItem={historiItem}
-          stokLogs={stokLogs}
-          loading={loadingLogs}
-          onOpenChange={() => setHistoriDialogOpen(false)}
-        />
+        <HistoriStokDialog open={historiDialogOpen} historiItem={historiItem} stokLogs={stokLogs} loading={loadingLogs} onOpenChange={() => setHistoriDialogOpen(false)} />
 
-        <DeleteConfirmDialog
-          open={confirmOpen}
-          onOpenChange={setConfirmOpen}
-          onConfirm={performDelete}
-          isLoading={deleteLoading}
-        />
+        <DeleteConfirmDialog open={confirmOpen} onOpenChange={setConfirmOpen} onConfirm={performDelete} isLoading={deleteLoading} />
       </div>
     </DashboardLayout>
   );

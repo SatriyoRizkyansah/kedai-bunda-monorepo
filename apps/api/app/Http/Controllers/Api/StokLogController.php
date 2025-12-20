@@ -319,9 +319,4 @@ class StokLogController extends Controller
             }
         }
     }
-            'sukses' => true,
-            'pesan' => 'Stok berhasil dikurangi',
-            'data' => $stokLog->load(['bahanBaku', 'user'])
-        ], 201);
-    }
 }

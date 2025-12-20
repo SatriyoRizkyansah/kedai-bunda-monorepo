@@ -505,6 +505,7 @@ class MenuController extends Controller
         $validator = Validator::make($request->all(), [
             'jumlah' => 'required|numeric|min:0.01',
             'keterangan' => 'nullable|string|max:500',
+            'harga_beli' => 'nullable|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -525,6 +526,7 @@ class MenuController extends Controller
             'user_id' => $request->user()->id,
             'tipe' => 'masuk',
             'jumlah' => $request->jumlah,
+            'harga_beli' => $request->harga_beli,
             'stok_sebelum' => $stokSebelum,
             'stok_sesudah' => $stokSesudah,
             'keterangan' => $request->keterangan,
@@ -564,6 +566,7 @@ class MenuController extends Controller
         $validator = Validator::make($request->all(), [
             'jumlah' => 'required|numeric|min:0.01',
             'keterangan' => 'nullable|string|max:500',
+            'harga_beli' => 'nullable|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -591,6 +594,7 @@ class MenuController extends Controller
             'user_id' => $request->user()->id,
             'tipe' => 'keluar',
             'jumlah' => $request->jumlah,
+            'harga_beli' => $request->harga_beli,
             'stok_sebelum' => $stokSebelum,
             'stok_sesudah' => $stokSesudah,
             'keterangan' => $request->keterangan,

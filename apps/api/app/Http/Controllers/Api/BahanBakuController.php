@@ -395,6 +395,7 @@ class BahanBakuController extends Controller
             'base_jumlah' => 'nullable|numeric|min:0.01',
             'base_satuan_id' => 'nullable|exists:satuan,id',
             'konversi_bahan_id' => 'nullable|exists:konversi_bahan,id',
+            'harga_beli' => 'nullable|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -427,6 +428,7 @@ class BahanBakuController extends Controller
                     'base_satuan_id' => $request->base_satuan_id ?? $bahanBaku->base_satuan_id,
                     'jumlah_awal' => $request->jumlah,
                     'jumlah_sisa' => $request->jumlah,
+                    'harga_beli' => $request->harga_beli,
                     'keterangan' => $request->keterangan ?? "Batch dari " . number_format($request->base_jumlah, 2) . " bahan mentah",
                 ]);
             }

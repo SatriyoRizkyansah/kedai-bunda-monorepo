@@ -18,6 +18,7 @@ class BatchBahanBaku extends Model
         'base_satuan_id',
         'jumlah_awal',
         'jumlah_sisa',
+        'harga_beli',
         'keterangan',
     ];
 
@@ -25,6 +26,7 @@ class BatchBahanBaku extends Model
         'base_jumlah' => 'decimal:2',
         'jumlah_awal' => 'decimal:2',
         'jumlah_sisa' => 'decimal:2',
+        'harga_beli' => 'decimal:2',
     ];
 
     // Relationships

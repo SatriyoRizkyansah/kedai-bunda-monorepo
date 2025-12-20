@@ -14,6 +14,7 @@ export const INITIAL_FORM_DATA: MenuFormData = {
 export const INITIAL_STOK_FORM = {
   jumlah: "",
   keterangan: "",
+  harga_beli: "",
 };
 
 // Kategori options

@@ -13,6 +13,7 @@ export interface MenuFormData {
 export interface StokFormData {
   jumlah: string;
   keterangan: string;
+  harga_beli: string;
 }
 
 export interface StokLog {

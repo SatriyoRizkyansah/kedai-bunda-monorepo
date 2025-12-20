@@ -36,6 +36,7 @@ export function BahanBakuTab() {
     keterangan: "",
     base_jumlah: "",
     base_satuan_id: "",
+    harga_beli: "",
   });
 
   const [historiDialogOpen, setHistoriDialogOpen] = useState(false);
@@ -107,7 +108,7 @@ export function BahanBakuTab() {
         satuan_id: item.satuan_id?.toString() || "",
         base_satuan_id: item.base_satuan_id?.toString() || "",
         stok_tersedia: item.stok_tersedia.toString(),
-        harga_per_satuan: item.harga_per_satuan.toString(),
+        harga_per_satuan: item.harga_per_satuan?.toString() || "",
         keterangan: item.keterangan || "",
         aktif: item.aktif,
       });
@@ -118,7 +119,7 @@ export function BahanBakuTab() {
         satuan_id: "",
         base_satuan_id: "",
         stok_tersedia: "0",
-        harga_per_satuan: "0",
+        harga_per_satuan: "",
         keterangan: "",
         aktif: true,
       });
@@ -137,10 +138,16 @@ export function BahanBakuTab() {
       nama: formData.nama,
       satuan_id: parseInt(formData.satuan_id),
       stok_tersedia: parseFloat(formData.stok_tersedia),
-      harga_per_satuan: parseFloat(formData.harga_per_satuan),
       keterangan: formData.keterangan,
       aktif: formData.aktif,
     };
+
+    // Harga per satuan sekarang opsional (hanya referensi)
+    if (formData.harga_per_satuan) {
+      payload.harga_per_satuan = parseFloat(formData.harga_per_satuan);
+    } else {
+      payload.harga_per_satuan = 0;
+    }
 
     if (formData.base_satuan_id) {
       payload.base_satuan_id = parseInt(formData.base_satuan_id);
@@ -184,6 +191,7 @@ export function BahanBakuTab() {
       keterangan: "",
       base_jumlah: "",
       base_satuan_id: item.base_satuan_id?.toString() || "",
+      harga_beli: "",
     });
     setStokDialogOpen(true);
   };
@@ -202,6 +210,10 @@ export function BahanBakuTab() {
     if (stokFormData.base_jumlah && stokFormData.base_satuan_id) {
       payload.base_jumlah = parseFloat(stokFormData.base_jumlah);
       payload.base_satuan_id = parseInt(stokFormData.base_satuan_id);
+    }
+
+    if (stokFormData.harga_beli) {
+      payload.harga_beli = parseFloat(stokFormData.harga_beli);
     }
 
     try {
@@ -257,7 +269,6 @@ export function BahanBakuTab() {
                 <TableRow>
                   <TableHead>Nama Bahan</TableHead>
                   <TableHead className="text-center">Stok</TableHead>
-                  <TableHead className="text-right">Harga/Satuan</TableHead>
                   <TableHead className="text-center">Status</TableHead>
                   <TableHead className="text-center">Aksi</TableHead>
                 </TableRow>
@@ -278,7 +289,6 @@ export function BahanBakuTab() {
                           </p>
                         )}
                       </TableCell>
-                      <TableCell className="text-right font-medium">Rp {Number(item.harga_per_satuan || 0).toLocaleString("id-ID")}</TableCell>
                       <TableCell className="text-center">
                         {lowStock ? (
                           <Badge variant="destructive" className="gap-1">
@@ -321,7 +331,7 @@ export function BahanBakuTab() {
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingItem ? "Edit Bahan Baku" : "Tambah Bahan Baku"}</DialogTitle>
-            <DialogDescription>Atur satuan stok dan satuan pembelian untuk tracking yang lebih baik</DialogDescription>
+            <DialogDescription>Atur satuan stok dan satuan pembelian. Harga akan di-track saat Anda menambah stok</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
@@ -331,6 +341,16 @@ export function BahanBakuTab() {
                 </label>
                 <Input value={formData.nama} onChange={(e) => setFormData({ ...formData, nama: e.target.value })} placeholder="Contoh: Ayam" required />
               </div>
+
+              <Card className="bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+                <CardContent className="p-3">
+                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                    <strong>💡 Sistem Harga Dinamis:</strong>
+                    <br />
+                    Harga bahan baku akan di-track otomatis saat Anda menambah stok. Setiap batch bisa memiliki harga yang berbeda. Harga di sini hanya referensi.
+                  </p>
+                </CardContent>
+              </Card>
 
               <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
                 <CardContent className="p-3">
@@ -390,10 +410,10 @@ export function BahanBakuTab() {
                 </div>
                 <div className="grid gap-2">
                   <label className="text-sm font-medium">
-                    Harga/Satuan <span className="text-destructive">*</span>
+                    Harga Ref/Satuan <span className="text-muted-foreground text-xs">(opsional)</span>
                   </label>
-                  <Input type="number" step="0.01" min="0" value={formData.harga_per_satuan} onChange={(e) => setFormData({ ...formData, harga_per_satuan: e.target.value })} required />
-                  <p className="text-xs text-muted-foreground">Per {satuanList.find((s) => s.id === parseInt(formData.satuan_id))?.nama || "satuan"}</p>
+                  <Input type="number" step="0.01" min="0" value={formData.harga_per_satuan} onChange={(e) => setFormData({ ...formData, harga_per_satuan: e.target.value })} />
+                  <p className="text-xs text-muted-foreground">Harga referensi saja (harga sebenarnya dari batch saat input)</p>
                 </div>
               </div>
               <div className="grid gap-2">
@@ -417,10 +437,20 @@ export function BahanBakuTab() {
             <DialogTitle>{stokDialogType === "tambah" ? "Tambah Stok" : "Kurangi Stok"}</DialogTitle>
             <DialogDescription>
               {stokItem?.nama} - Stok saat ini: {Number(stokItem?.stok_tersedia || 0).toFixed(2)} {stokItem?.satuan?.nama || stokItem?.satuan_dasar}
+              <br />
+              <span className="text-xs text-amber-600 dark:text-amber-400 block mt-1">💰 Input harga di sini untuk tracking HPP yang akurat</span>
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleStokSubmit}>
             <div className="grid gap-4 py-4">
+              <Card className="bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+                <CardContent className="p-3">
+                  <p className="text-xs text-amber-700 dark:text-amber-400">
+                    <strong>📌 Tracking Harga Dinamis:</strong> Harga bahan baku sekarang di-input saat Anda menambah stok, bukan statis di data bahan. Ini memungkinkan tracking HPP yang lebih akurat.
+                  </p>
+                </CardContent>
+              </Card>
+
               {stokDialogType === "tambah" && stokItem?.base_satuan_id && (
                 <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800">
                   <p className="text-xs font-medium text-blue-700 dark:text-blue-400 mb-2">📦 Tracking Bahan Mentah (Opsional)</p>
@@ -441,6 +471,12 @@ export function BahanBakuTab() {
               <div className="grid gap-2">
                 <label className="text-sm font-medium">Jumlah</label>
                 <Input type="number" step="0.01" min="0" value={stokFormData.jumlah} onChange={(e) => setStokFormData({ ...stokFormData, jumlah: e.target.value })} required />
+              </div>
+
+              <div className="grid gap-2">
+                <label className="text-sm font-medium">Harga Beli Total</label>
+                <Input type="number" step="0.01" min="0" value={stokFormData.harga_beli} onChange={(e) => setStokFormData({ ...stokFormData, harga_beli: e.target.value })} placeholder="Kosongkan jika tidak ada (opsional)" />
+                <p className="text-xs text-muted-foreground">Total harga pembelian batch ini. Gunakan ini untuk tracking HPP akurat di laporan keuntungan</p>
               </div>
 
               <div className="grid gap-2">
