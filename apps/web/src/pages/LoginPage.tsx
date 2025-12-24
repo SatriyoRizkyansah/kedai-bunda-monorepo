@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
+import { notify } from "@/lib/notify";
 import type { LoginFormData, LoginResponse } from "./login";
 import { LOGIN_MESSAGES, validateLoginForm } from "./login/utils";
 import { LoginContainer } from "./login/LoginContainer";
@@ -41,6 +42,7 @@ export function LoginPage() {
     const validationError = validateLoginForm(formData);
     if (validationError) {
       setError(validationError);
+      notify.error(validationError, { duration: 5000 });
       return;
     }
 
@@ -55,13 +57,22 @@ export function LoginPage() {
       if (response.data.sukses) {
         localStorage.setItem("token", response.data.data.token);
         localStorage.setItem("user", JSON.stringify(response.data.data.user));
-        navigate("/dashboard");
+        notify.success("Login berhasil! Selamat datang...", { duration: 2000 });
+        // Delay sebelum navigate supaya user lihat toast
+        setTimeout(() => {
+          navigate("/dashboard");
+        }, 2000);
       } else {
-        setError(response.data.pesan || "Login gagal. Silakan coba lagi.");
+        const errorMsg = response.data.pesan || "Login gagal. Silakan coba lagi.";
+        setError(errorMsg);
+        notify.error(errorMsg, { duration: 5000 });
+        setLoading(false);
       }
     } catch (err: any) {
-      setError(err.response?.data?.pesan || "Login gagal. Silakan coba lagi.");
-    } finally {
+      console.error("Login error:", err);
+      const errorMsg = err.response?.data?.pesan || err.message || "Login gagal. Silakan coba lagi.";
+      setError(errorMsg);
+      notify.error(errorMsg, { duration: 5000 });
       setLoading(false);
     }
   };
