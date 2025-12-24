@@ -211,13 +211,22 @@ export function DashboardLayout({ children }: NavbarProps) {
 
   // useMemo untuk mencegah re-render navbar
   const menuItems = useMemo(() => {
-    const baseItems = [
-      { href: "/dashboard", label: "Dashboard", icon: Home },
-      { href: "/inventori", label: "Inventori", icon: Package },
-      { href: "/menu", label: "Menu", icon: UtensilsCrossed },
-      { href: "/transaksi", label: "Transaksi", icon: ShoppingCart },
-      { href: "/laporan", label: "Laporan", icon: BarChart3 },
-    ];
+    const baseItems = [{ href: "/dashboard", label: "Dashboard", icon: Home }];
+
+    // Inventory and Menu - only for admin and super_admin
+    if (user && (user.role === "admin" || user.role === "super_admin")) {
+      baseItems.push({ href: "/inventori", label: "Inventori", icon: Package }, { href: "/menu", label: "Menu", icon: UtensilsCrossed });
+    }
+
+    // Transaksi - only for kasir and super_admin
+    if (user && (user.role === "super_admin" || (user.role as any) === "kasir")) {
+      baseItems.push({ href: "/transaksi", label: "Transaksi", icon: ShoppingCart });
+    }
+
+    // Laporan - only for admin and super_admin
+    if (user && (user.role === "admin" || user.role === "super_admin")) {
+      baseItems.push({ href: "/laporan", label: "Laporan", icon: BarChart3 });
+    }
 
     // Add Users menu only for super_admin
     if (user?.role === "super_admin") {

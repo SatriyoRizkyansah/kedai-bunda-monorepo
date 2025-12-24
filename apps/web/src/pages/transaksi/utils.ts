@@ -77,7 +77,8 @@ export const filterMenu = (menuList: Menu[], searchTerm: string, selectedKategor
 // Filter transaksi
 export const filterTransaksi = (transaksiList: any[], searchQuery: string, selectedStatus: string): any[] => {
   return transaksiList.filter((item) => {
-    const matchSearch = item.kode_transaksi?.toLowerCase().includes(searchQuery.toLowerCase()) || item.nama_pelanggan?.toLowerCase().includes(searchQuery.toLowerCase());
+    // If search is empty, show all; otherwise filter
+    const matchSearch = searchQuery === "" || item.kode_transaksi?.toLowerCase().includes(searchQuery.toLowerCase()) || item.nama_pelanggan?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchStatus = selectedStatus === "semua" || item.status === selectedStatus;
     return matchSearch && matchStatus;
   });

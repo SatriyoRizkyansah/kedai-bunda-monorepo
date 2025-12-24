@@ -28,11 +28,36 @@ export function DashboardPage() {
 
   const fetchDashboardData = async () => {
     try {
-      const [bahanRes, menuRes, transaksiRes] = await Promise.all([api.get("/bahan-baku"), api.get("/menu"), api.get("/transaksi")]);
+      const userStr = localStorage.getItem("user");
+      const userData = userStr ? JSON.parse(userStr) : null;
+      const userRole = userData?.role;
 
-      const bahanBaku: BahanBaku[] = bahanRes.data.data || [];
-      const menu: Menu[] = menuRes.data.data || [];
-      const transaksi: Transaksi[] = transaksiRes.data.data || [];
+      const requests: Promise<any>[] = [];
+      const requestKeys: string[] = [];
+
+      // Fetch bahan-baku dan menu hanya untuk admin dan super_admin
+      if (userRole === "admin" || userRole === "super_admin") {
+        requests.push(api.get("/bahan-baku"));
+        requestKeys.push("bahan-baku");
+        requests.push(api.get("/menu"));
+        requestKeys.push("menu");
+      }
+
+      // Fetch transaksi untuk semua role (kasir, admin, super_admin)
+      requests.push(api.get("/transaksi"));
+      requestKeys.push("transaksi");
+
+      const responses = await Promise.all(requests);
+
+      // Map responses by key
+      const data: any = {};
+      responses.forEach((res, idx) => {
+        data[requestKeys[idx]] = res.data.data || [];
+      });
+
+      const bahanBaku: BahanBaku[] = data["bahan-baku"] || [];
+      const menu: Menu[] = data["menu"] || [];
+      const transaksi: Transaksi[] = data["transaksi"] || [];
 
       // Hitung transaksi hari ini
       const today = new Date().toISOString().split("T")[0];
@@ -98,8 +123,8 @@ export function DashboardPage() {
       }
 
       setStats({
-        totalMenu: menu.length,
-        totalBahanBaku: bahanBaku.length,
+        totalMenu: menu?.length || 0,
+        totalBahanBaku: bahanBaku?.length || 0,
         transaksiHariIni: transaksiHariIni.length,
         pendapatanHariIni,
         pendapatanKemarin,
@@ -133,21 +158,25 @@ export function DashboardPage() {
     );
   }
 
+  const showInventoryCards = user?.role === "admin" || user?.role === "super_admin";
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
         <DashboardWelcomeCard userName={user?.name} />
-        <DashboardStatsGrid stats={stats} trend={trend} />
+        <DashboardStatsGrid stats={stats} trend={trend} userRole={user?.role} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <RevenueTrendCard data={stats.grafikPendapatan} />
           <CategorySalesCard data={stats.penjualanPerKategori} />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <TopMenuCard data={stats.menuTerlaris} />
-          <LowStockAlertCard data={stats.bahanStokMenipis} />
-        </div>
+        {showInventoryCards && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <TopMenuCard data={stats.menuTerlaris} />
+            <LowStockAlertCard data={stats.bahanStokMenipis} />
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );

@@ -7,6 +7,7 @@ import { TransaksiPage } from "./pages/TransaksiPage";
 import { StokLogPage } from "./pages/StokLogPage";
 import { LaporanPage } from "./pages/LaporanPage";
 import { ThemeSettingsPage } from "./pages/ThemeSettingsPage";
+import { UsersPage } from "./pages/UsersPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { useGlobalThemeShortcut } from "./hooks/useGlobalThemeShortcut";
@@ -30,7 +31,7 @@ function AppRoutes() {
       <Route
         path="/inventori"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole={["admin", "super_admin"]}>
             <InventoriPage />
           </ProtectedRoute>
         }
@@ -38,7 +39,7 @@ function AppRoutes() {
       <Route
         path="/menu"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole={["admin", "super_admin"]}>
             <MenuPage />
           </ProtectedRoute>
         }
@@ -46,7 +47,7 @@ function AppRoutes() {
       <Route
         path="/transaksi"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole={["kasir", "super_admin"]}>
             <TransaksiPage />
           </ProtectedRoute>
         }
@@ -62,7 +63,7 @@ function AppRoutes() {
       <Route
         path="/laporan"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole={["admin", "super_admin"]}>
             <LaporanPage />
           </ProtectedRoute>
         }
@@ -72,6 +73,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <ThemeSettingsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/users"
+        element={
+          <ProtectedRoute requiredRole="super_admin">
+            <UsersPage />
           </ProtectedRoute>
         }
       />

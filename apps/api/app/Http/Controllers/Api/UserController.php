@@ -43,7 +43,16 @@ class UserController extends Controller
      */
     public function index()
     {
-        $users = User::orderBy('created_at', 'desc')->get();
+        // Check authorization
+        $currentUser = auth()->user();
+        if (!$currentUser || $currentUser->role !== 'super_admin') {
+            return response()->json([
+                'sukses' => false,
+                'pesan' => 'Tidak memiliki akses untuk melihat data pengguna'
+            ], 403);
+        }
+
+        $users = User::select('id', 'name', 'email', 'role', 'aktif', 'created_at', 'updated_at')->orderBy('created_at', 'desc')->get();
 
         return response()->json([
             'sukses' => true,
@@ -259,6 +268,57 @@ class UserController extends Controller
             'sukses' => true,
             'pesan' => 'User berhasil dihapus'
         ]);
+    }
+
+    /**
+     * Store a newly created user in storage (super_admin only)
+     */
+    public function store(Request $request)
+    {
+        // Check authorization
+        if (auth()->user()->role !== 'super_admin') {
+            return response()->json([
+                'sukses' => false,
+                'pesan' => 'Tidak memiliki akses untuk membuat pengguna baru'
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email',
+            'password' => 'required|string|min:6',
+            'role' => 'required|in:super_admin,admin,kasir',
+            'aktif' => 'boolean'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'sukses' => false,
+                'pesan' => 'Validasi gagal',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'role' => $request->role,
+            'aktif' => $request->boolean('aktif', true)
+        ]);
+
+        return response()->json([
+            'sukses' => true,
+            'pesan' => 'Pengguna berhasil dibuat',
+            'data' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'aktif' => $user->aktif,
+                'created_at' => $user->created_at
+            ]
+        ], 201);
     }
 
     /**

@@ -36,9 +36,9 @@ class TransaksiController extends Controller
      *     @OA\Parameter(
      *         name="status",
      *         in="query",
-     *         description="Filter berdasarkan status (selesai/dibatalkan)",
+     *         description="Filter berdasarkan status (selesai/batal)",
      *         required=false,
-     *         @OA\Schema(type="string", enum={"selesai", "dibatalkan"}, example="selesai")
+     *         @OA\Schema(type="string", enum={"selesai", "batal"}, example="selesai")
      *     ),
      *     @OA\Response(
      *         response=200,
@@ -151,6 +151,8 @@ class TransaksiController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'user_id' => 'required|exists:users,id',
+            'nama_pelanggan' => 'nullable|string|max:255',
+            'metode_pembayaran' => 'nullable|in:tunai,qris,transfer',
             'bayar' => 'required|numeric|min:0',
             'catatan' => 'nullable|string',
             'items' => 'required|array|min:1',
@@ -225,9 +227,11 @@ class TransaksiController extends Controller
             $transaksi = Transaksi::create([
                 'nomor_transaksi' => Transaksi::generateNomorTransaksi(),
                 'user_id' => $request->user_id,
+                'nama_pelanggan' => $request->nama_pelanggan,
                 'total' => $total,
                 'bayar' => $request->bayar,
                 'kembalian' => $kembalian,
+                'metode_pembayaran' => $request->metode_pembayaran ?? 'tunai',
                 'status' => 'selesai',
                 'catatan' => $request->catatan
             ]);
@@ -392,7 +396,7 @@ class TransaksiController extends Controller
                 throw new \Exception('Transaksi tidak ditemukan');
             }
 
-            if ($transaksi->status === 'dibatalkan') {
+            if ($transaksi->status === 'batal') {
                 throw new \Exception('Transaksi sudah dibatalkan sebelumnya');
             }
 
@@ -427,7 +431,7 @@ class TransaksiController extends Controller
                 }
             }
 
-            $transaksi->update(['status' => 'dibatalkan']);
+            $transaksi->update(['status' => 'batal']);
 
             DB::commit();
 
