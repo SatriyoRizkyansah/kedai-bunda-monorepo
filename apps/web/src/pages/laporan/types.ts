@@ -59,15 +59,18 @@ export interface PerBahanBaku {
 }
 
 export interface StokLogItem {
-  id: number;
-  bahan_baku_id: number;
+  id: string | number;
+  bahan_baku_id?: number | null;
+  menu_id?: number;
   jumlah: number;
   tipe: "masuk" | "keluar";
   keterangan: string;
   harga_beli?: number;
   created_at: string;
-  bahan_baku: { nama: string; satuan_dasar: string };
+  bahan_baku?: { nama: string; satuan_dasar: string };
+  menu?: { nama: string };
   user?: { name: string };
+  source?: "menu" | "bahan_baku";
 }
 
 export interface LaporanStokLog {

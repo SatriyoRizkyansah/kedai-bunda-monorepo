@@ -8,6 +8,7 @@ use App\Models\Menu;
 use App\Models\BahanBaku;
 use App\Models\User;
 use App\Models\StokLog;
+use App\Models\MenuStokLog;
 use App\Models\DetailTransaksi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -416,7 +417,8 @@ class DashboardController extends Controller
         $tanggalSelesai = $request->input('tanggal_selesai', Carbon::now()->format('Y-m-d'));
         $bahanBakuId = $request->input('bahan_baku_id');
         
-        $query = StokLog::with(['bahanBaku', 'user'])
+        // Query StokLog (dari bahan baku batch)
+        $queryStokLog = StokLog::with(['bahanBaku', 'user'])
             ->select('stok_log.*')
             ->whereBetween('created_at', [
                 $tanggalMulai . ' 00:00:00',
@@ -424,25 +426,63 @@ class DashboardController extends Controller
             ]);
             
         if ($bahanBakuId) {
-            $query->where('bahan_baku_id', $bahanBakuId);
+            $queryStokLog->where('bahan_baku_id', $bahanBakuId);
         }
         
-        $stokLogs = $query->orderBy('created_at', 'desc')->get();
+        $stokLogs = $queryStokLog->orderBy('created_at', 'desc')->get();
         
-        // Ringkasan stok masuk - gunakan harga_beli jika ada, jika tidak gunakan harga_per_satuan
-        $stokMasuk = $stokLogs->where('tipe', 'masuk');
-        $totalStokMasuk = $stokMasuk->sum('jumlah');
-        $nilaiStokMasuk = $stokMasuk->sum(function($log) {
-            // Gunakan harga_beli jika ada (ini adalah total harga untuk batch)
-            return $log->harga_beli ?? 0;
+        // Query MenuStokLog (dari menu manual) - untuk items yang follow bahan baku
+        $menuStokLogs = collect([]);
+        if (!$bahanBakuId) { // Hanya ambil menu logs jika filter tidak spesifik ke bahan baku tertentu
+            $menuStokLogs = MenuStokLog::with(['menu', 'user'])
+                ->whereBetween('created_at', [
+                    $tanggalMulai . ' 00:00:00',
+                    $tanggalSelesai . ' 23:59:59'
+                ])
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
+        
+        // Transform MenuStokLog ke format StokLog untuk unified display
+        $menuLogsTransformed = $menuStokLogs->map(function($log) {
+            return [
+                'id' => 'menu_' . $log->id,
+                'bahan_baku_id' => null,
+                'menu_id' => $log->menu_id,
+                'user_id' => $log->user_id,
+                'tipe' => $log->tipe,
+                'jumlah' => $log->jumlah,
+                'base_satuan_id' => null,
+                'base_jumlah' => $log->jumlah, // Menu tidak punya base satuan conversion
+                'konversi_bahan_id' => null,
+                'stok_sebelum' => $log->stok_sebelum,
+                'stok_sesudah' => $log->stok_sesudah,
+                'referensi' => $log->referensi,
+                'keterangan' => $log->keterangan,
+                'harga_beli' => $log->harga_beli,
+                'created_at' => $log->created_at,
+                'updated_at' => $log->updated_at,
+                'bahan_baku' => null,
+                'menu' => $log->menu,
+                'user' => $log->user,
+                'source' => 'menu' // Marker untuk membedakan dari stok_log
+            ];
         });
         
-        // Ringkasan stok keluar - gunakan harga_beli jika ada, jika tidak gunakan harga_per_satuan
-        $stokKeluar = $stokLogs->where('tipe', 'keluar');
+        // Merge semua logs
+        $allLogs = $stokLogs->concat($menuLogsTransformed)->sortByDesc('created_at');
+        
+        // Ringkasan total dari kedua sumber
+        $stokMasuk = $allLogs->where('tipe', 'masuk');
+        $totalStokMasuk = $stokMasuk->sum('jumlah');
+        $nilaiStokMasuk = $stokMasuk->sum(function($log) {
+            return $log['harga_beli'] ?? 0;
+        });
+        
+        $stokKeluar = $allLogs->where('tipe', 'keluar');
         $totalStokKeluar = $stokKeluar->sum('jumlah');
         $nilaiStokKeluar = $stokKeluar->sum(function($log) {
-            // Gunakan harga_beli jika ada (ini adalah total harga untuk batch)
-            return $log->harga_beli ?? 0;
+            return $log['harga_beli'] ?? 0;
         });
         
         // Group by bahan baku dengan detail per batch/log
@@ -481,7 +521,7 @@ class DashboardController extends Controller
                     'selesai' => $tanggalSelesai
                 ],
                 'ringkasan' => [
-                    'total_transaksi' => $stokLogs->count(),
+                    'total_transaksi' => $allLogs->count(),
                     'stok_masuk' => [
                         'jumlah_transaksi' => $stokMasuk->count(),
                         'total_unit' => $totalStokMasuk,
@@ -494,7 +534,7 @@ class DashboardController extends Controller
                     ]
                 ],
                 'per_bahan_baku' => $perBahanBaku,
-                'logs' => $stokLogs
+                'logs' => $allLogs->values()
             ]
         ]);
     }

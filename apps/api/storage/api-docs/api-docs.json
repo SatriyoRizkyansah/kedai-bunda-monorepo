@@ -1216,14 +1216,19 @@
                                                         "type": "integer",
                                                         "example": 1
                                                     },
-                                                    "konversi_bahan_id": {
+                                                    "bahan_baku_id": {
                                                         "type": "integer",
                                                         "example": 1
+                                                    },
+                                                    "satuan_id": {
+                                                        "type": "integer",
+                                                        "example": 5,
+                                                        "nullable": true
                                                     },
                                                     "jumlah": {
                                                         "type": "number",
                                                         "format": "float",
-                                                        "example": 0.2
+                                                        "example": 1
                                                     }
                                                 },
                                                 "type": "object"
@@ -1256,7 +1261,7 @@
                             "schema": {
                                 "required": [
                                     "menu_id",
-                                    "konversi_bahan_id",
+                                    "bahan_baku_id",
                                     "jumlah"
                                 ],
                                 "properties": {
@@ -1264,14 +1269,19 @@
                                         "type": "integer",
                                         "example": 1
                                     },
-                                    "konversi_bahan_id": {
+                                    "bahan_baku_id": {
                                         "type": "integer",
-                                        "example": 1
+                                        "example": 5
+                                    },
+                                    "satuan_id": {
+                                        "type": "integer",
+                                        "example": 8,
+                                        "nullable": true
                                     },
                                     "jumlah": {
                                         "type": "number",
                                         "format": "float",
-                                        "example": 0.2
+                                        "example": 1
                                     }
                                 },
                                 "type": "object"
@@ -1315,7 +1325,7 @@
                                         },
                                         "pesan": {
                                             "type": "string",
-                                            "example": "Konversi bahan ini sudah ada di komposisi menu"
+                                            "example": "Bahan baku ini sudah ada di komposisi menu"
                                         }
                                     },
                                     "type": "object"

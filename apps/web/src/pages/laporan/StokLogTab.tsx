@@ -159,59 +159,71 @@ export function StokLogTab({ loading, laporan, period }: StokLogTabProps) {
           <div className="max-h-[600px] overflow-y-auto">
             {laporan.logs.length > 0 ? (
               <div className="divide-y">
-                {laporan.logs.slice(0, 100).map((log) => (
-                  <div key={log.id} className="p-4 hover:bg-muted/50 transition">
-                    {/* Header Row: Bahan, Tipe, Tanggal */}
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-base">{log.bahan_baku?.nama ?? "-"}</h4>
-                        <p className="text-xs text-muted-foreground">{log.keterangan || "Tanpa keterangan"}</p>
-                      </div>
-                      <div className="text-right">
-                        <Badge variant={log.tipe === "masuk" ? "default" : "destructive"} className={log.tipe === "masuk" ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-400" : ""}>
-                          {log.tipe === "masuk" ? "📥 Masuk" : "📤 Keluar"}
-                        </Badge>
-                      </div>
-                    </div>
+                {laporan.logs.slice(0, 100).map((log) => {
+                  // Determine if this is a menu log or bahan baku log
+                  const isMenuLog = (log as any).source === "menu" || (log as any).menu_id;
+                  const itemName = isMenuLog ? (log as any).menu?.nama : log.bahan_baku?.nama;
+                  const satuan = isMenuLog ? "" : log.bahan_baku?.satuan_dasar;
 
-                    {/* Details Grid */}
-                    <div className="grid grid-cols-2 gap-3 mt-3 p-3 bg-muted/30 rounded-lg">
-                      {/* Jumlah Stok */}
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase">Jumlah</p>
-                        <p className="text-sm font-semibold">
-                          {log.tipe === "masuk" ? "+" : "-"}
-                          {formatNumber(log.jumlah)} {log.bahan_baku?.satuan_dasar}
-                        </p>
-                      </div>
-
-                      {/* Tanggal */}
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase">Tanggal</p>
-                        <p className="text-sm">{formatDateTime(log.created_at)}</p>
-                      </div>
-                    </div>
-
-                    {/* Harga Batch - Show only if present */}
-                    {log.harga_beli ? (
-                      <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                        <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mb-2">💰 Harga Batch</p>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <p className="text-xs text-amber-600 dark:text-amber-400">Total Harga</p>
-                            <p className="text-sm font-bold text-amber-700 dark:text-amber-300">{formatCurrency(log.harga_beli)}</p>
+                  return (
+                    <div key={log.id} className="p-4 hover:bg-muted/50 transition">
+                      {/* Header Row: Item, Tipe, Source */}
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-semibold text-base">{itemName ?? "-"}</h4>
+                            <Badge variant="outline" className="text-xs">
+                              {isMenuLog ? "🍽️ Menu" : "📦 Bahan Baku"}
+                            </Badge>
                           </div>
-                          {/* <div>
-                            <p className="text-xs text-amber-600 dark:text-amber-400">Per Unit</p>
-                            <p className="text-sm font-bold text-amber-700 dark:text-amber-300">{log.jumlah > 0 ? formatCurrency(log.harga_beli / log.jumlah) : "-"}</p>
-                          </div> */}
+                          <p className="text-xs text-muted-foreground">{log.keterangan || "Tanpa keterangan"}</p>
+                        </div>
+                        <div className="text-right">
+                          <Badge variant={log.tipe === "masuk" ? "default" : "destructive"} className={log.tipe === "masuk" ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-400" : ""}>
+                            {log.tipe === "masuk" ? "📥 Masuk" : "📤 Keluar"}
+                          </Badge>
                         </div>
                       </div>
-                    ) : (
-                      <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-900/20 rounded-lg text-xs text-muted-foreground italic">(Tanpa harga input)</div>
-                    )}
-                  </div>
-                ))}
+
+                      {/* Details Grid */}
+                      <div className="grid grid-cols-2 gap-3 mt-3 p-3 bg-muted/30 rounded-lg">
+                        {/* Jumlah Stok */}
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground uppercase">Jumlah</p>
+                          <p className="text-sm font-semibold">
+                            {log.tipe === "masuk" ? "+" : "-"}
+                            {formatNumber(log.jumlah)} {satuan || "unit"}
+                          </p>
+                        </div>
+
+                        {/* Tanggal */}
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground uppercase">Tanggal</p>
+                          <p className="text-sm">{formatDateTime(log.created_at)}</p>
+                        </div>
+                      </div>
+
+                      {/* Harga Batch - Show only if present */}
+                      {log.harga_beli ? (
+                        <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                          <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mb-2">💰 {isMenuLog ? "Harga Input" : "Harga Batch"}</p>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <p className="text-xs text-amber-600 dark:text-amber-400">Total Harga</p>
+                              <p className="text-sm font-bold text-amber-700 dark:text-amber-300">{formatCurrency(log.harga_beli)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-amber-600 dark:text-amber-400">Per Unit</p>
+                              <p className="text-sm font-bold text-amber-700 dark:text-amber-300">{log.jumlah > 0 ? formatCurrency(log.harga_beli / log.jumlah) : "-"}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-900/20 rounded-lg text-xs text-muted-foreground italic">(Tanpa harga input)</div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <p className="text-center text-muted-foreground py-8">Tidak ada riwayat di periode ini</p>
