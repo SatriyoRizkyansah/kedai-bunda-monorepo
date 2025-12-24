@@ -83,9 +83,13 @@ Route::middleware(['auth:api'])->group(function () {
         Route::delete('komposisi-menu/menu/{menuId}', [KomposisiMenuController::class, 'destroyByMenu']);
     });
 
-    // Transaksi (kasir dan super_admin)
+    // Transaksi - read access untuk admin & kasir (untuk laporan & dashboard)
+    Route::get('transaksi', [TransaksiController::class, 'index']);
+    Route::get('transaksi/{id}', [TransaksiController::class, 'show']);
+    
+    // Transaksi - write access hanya untuk kasir dan super_admin
     Route::middleware('role:super_admin,kasir')->group(function () {
-        Route::apiResource('transaksi', TransaksiController::class)->except(['update', 'destroy']);
+        Route::post('transaksi', [TransaksiController::class, 'store']);
     });
     
     // Cancel transaksi - only admin dan super_admin
