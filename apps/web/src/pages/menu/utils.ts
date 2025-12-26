@@ -9,6 +9,8 @@ export const INITIAL_FORM_DATA: MenuFormData = {
   tersedia: true,
   stok: "0",
   kelola_stok_mandiri: true,
+  gambar: null,
+  gambar_preview: "",
 };
 
 export const INITIAL_STOK_FORM = {
@@ -69,4 +71,25 @@ export const validateStokForm = (data: { jumlah: string }): string | null => {
     return "Jumlah harus lebih dari 0";
   }
   return null;
+};
+
+// Build image URL from gambar path
+export const getImageUrl = (gambar: string | null | undefined): string | null => {
+  if (!gambar) return null;
+
+  const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+  const baseUrl = apiUrl.replace("/api", "");
+
+  // If gambar already has http, return as is
+  if (gambar.startsWith("http")) {
+    return gambar;
+  }
+
+  // If gambar starts with /, it's a path from storage
+  if (gambar.startsWith("/")) {
+    return baseUrl + gambar;
+  }
+
+  // Otherwise assume it's a path without leading slash
+  return baseUrl + "/" + gambar;
 };

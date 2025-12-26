@@ -26,7 +26,7 @@ class DetailTransaksiResource extends JsonResource
                 ];
             }),
             'jumlah' => $this->jumlah,
-            'harga_satuan' => (float) $this->harga_satuan,
+            'harga' => (float) $this->harga_satuan,
             'subtotal' => (float) $this->subtotal,
         ];
     }

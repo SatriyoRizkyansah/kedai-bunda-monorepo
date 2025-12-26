@@ -136,11 +136,11 @@ class MenuController extends Controller
             'nama' => 'required|string|max:255',
             'kategori' => 'required|in:makanan,minuman',
             'harga_jual' => 'required|numeric|min:0',
-            'gambar' => 'nullable|string',
+            'gambar' => 'nullable|file|max:2048',
             'deskripsi' => 'nullable|string',
-            'tersedia' => 'boolean',
+            'tersedia' => 'nullable|in:true,false,1,0',
             'stok' => 'nullable|numeric|min:0',
-            'kelola_stok_mandiri' => 'boolean',
+            'kelola_stok_mandiri' => 'nullable|in:true,false,1,0',
             'satuan_id' => 'nullable|exists:satuan,id',
         ]);
 
@@ -153,9 +153,26 @@ class MenuController extends Controller
         }
 
         $data = $request->all();
-        // Default kelola_stok_mandiri = true (stok manual)
-        if (!isset($data['kelola_stok_mandiri'])) {
+        
+        // Convert string boolean ke boolean
+        if (isset($data['tersedia'])) {
+            $data['tersedia'] = in_array($data['tersedia'], ['true', '1', true, 1]);
+        } else {
+            $data['tersedia'] = true;
+        }
+        
+        if (isset($data['kelola_stok_mandiri'])) {
+            $data['kelola_stok_mandiri'] = in_array($data['kelola_stok_mandiri'], ['true', '1', true, 1]);
+        } else {
             $data['kelola_stok_mandiri'] = true;
+        }
+        
+        // Handle file upload
+        if ($request->hasFile('gambar')) {
+            $file = $request->file('gambar');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $file->storeAs('menu', $filename, 'public');
+            $data['gambar'] = '/storage/menu/' . $filename;
         }
 
         $menu = Menu::create($data);
@@ -310,11 +327,11 @@ class MenuController extends Controller
             'nama' => 'sometimes|string|max:255',
             'kategori' => 'sometimes|in:makanan,minuman',
             'harga_jual' => 'sometimes|numeric|min:0',
-            'gambar' => 'nullable|string',
+            'gambar' => 'nullable|file|max:2048',
             'deskripsi' => 'nullable|string',
-            'tersedia' => 'boolean',
+            'tersedia' => 'nullable|in:true,false,1,0',
             'stok' => 'nullable|numeric|min:0',
-            'kelola_stok_mandiri' => 'boolean',
+            'kelola_stok_mandiri' => 'nullable|in:true,false,1,0',
             'satuan_id' => 'nullable|exists:satuan,id',
         ]);
 
@@ -326,6 +343,36 @@ class MenuController extends Controller
             ], 422);
         }
 
+        $data = $request->all();
+        
+        // Convert string boolean ke boolean
+        if (isset($data['tersedia'])) {
+            $data['tersedia'] = in_array($data['tersedia'], ['true', '1', true, 1]);
+        }
+        
+        if (isset($data['kelola_stok_mandiri'])) {
+            $data['kelola_stok_mandiri'] = in_array($data['kelola_stok_mandiri'], ['true', '1', true, 1]);
+        }
+        
+        // Handle file upload - hanya jika ada file baru (frontend hanya kirim jika File object)
+        if ($request->hasFile('gambar')) {
+            // Hapus file lama jika ada
+            if ($menu->gambar) {
+                $oldPath = public_path($menu->gambar);
+                if (file_exists($oldPath)) {
+                    unlink($oldPath);
+                }
+            }
+            
+            $file = $request->file('gambar');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $file->storeAs('menu', $filename, 'public');
+            $data['gambar'] = '/storage/menu/' . $filename;
+        } else {
+            // Jangan update gambar jika tidak ada file baru
+            unset($data['gambar']);
+        }
+
         // Jika menu diubah dari "Terhubung Bahan Baku" (false) ke "Manual" (true), hapus semua komposisi
         if ($request->has('kelola_stok_mandiri') && 
             $request->kelola_stok_mandiri === true && 
@@ -333,7 +380,7 @@ class MenuController extends Controller
             KomposisiMenu::where('menu_id', $menu->id)->delete();
         }
 
-        $menu->update($request->all());
+        $menu->update($data);
 
         return response()->json([
             'sukses' => true,

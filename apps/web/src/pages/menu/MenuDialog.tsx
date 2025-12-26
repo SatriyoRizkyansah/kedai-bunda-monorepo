@@ -1,4 +1,4 @@
-import { Link2, Unlink } from "lucide-react";
+import { Link2, Unlink, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -62,6 +62,51 @@ export function MenuDialog({ open, editingItem, formData, onFormDataChange, onSu
                 Deskripsi
               </label>
               <Input id="deskripsi" value={formData.deskripsi} onChange={(e) => onFormDataChange({ ...formData, deskripsi: e.target.value })} placeholder="Deskripsi menu (opsional)" disabled={isLoading} />
+            </div>
+
+            {/* Foto Menu */}
+            <div className="grid gap-2">
+              <label className="text-sm font-medium">Foto Menu</label>
+              <div className="border-2 border-dashed border-border rounded-lg p-4">
+                {formData.gambar_preview ? (
+                  <div className="relative">
+                    <img src={formData.gambar_preview} alt="Preview" className="w-full h-48 object-cover rounded-lg" />
+                    <button
+                      type="button"
+                      onClick={() => onFormDataChange({ ...formData, gambar: null, gambar_preview: "" })}
+                      className="absolute top-2 right-2 bg-destructive text-white p-1 rounded-full hover:bg-destructive/90"
+                      disabled={isLoading}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center cursor-pointer py-6 gap-2">
+                    <Upload className="h-8 w-8 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Klik untuk upload foto</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            onFormDataChange({
+                              ...formData,
+                              gambar: file,
+                              gambar_preview: event.target?.result as string,
+                            });
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="hidden"
+                      disabled={isLoading}
+                    />
+                  </label>
+                )}
+              </div>
             </div>
 
             {/* Mode Stok */}

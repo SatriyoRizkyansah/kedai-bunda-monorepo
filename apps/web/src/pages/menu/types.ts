@@ -8,6 +8,8 @@ export interface MenuFormData {
   tersedia: boolean;
   stok: string;
   kelola_stok_mandiri: boolean;
+  gambar?: File | null;
+  gambar_preview?: string;
 }
 
 export interface StokFormData {

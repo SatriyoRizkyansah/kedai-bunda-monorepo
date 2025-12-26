@@ -1,12 +1,14 @@
 import type { CartItem, Menu } from "./types";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
 // Get image URL
 export const getImageUrl = (gambar: string | null | undefined): string | null => {
   if (!gambar) return null;
+  const baseUrl = API_URL.replace("/api", "");
   if (gambar.startsWith("http")) return gambar;
-  return API_URL + "/storage/" + gambar;
+  if (gambar.startsWith("/")) return baseUrl + gambar;
+  return baseUrl + "/" + gambar;
 };
 
 // Calculate total

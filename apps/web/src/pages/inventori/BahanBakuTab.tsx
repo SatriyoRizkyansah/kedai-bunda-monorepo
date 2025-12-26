@@ -490,7 +490,16 @@ export function BahanBakuTab() {
 
               <div className="grid gap-2">
                 <label className="text-sm font-medium">Harga Beli Total</label>
-                <Input type="number" step="0.01" min="0" value={stokFormData.harga_beli} onChange={(e) => setStokFormData({ ...stokFormData, harga_beli: e.target.value })} placeholder="Kosongkan jika tidak ada (opsional)" />
+                <Input
+                  type="text"
+                  min="0"
+                  value={stokFormData.harga_beli ? new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(parseFloat(stokFormData.harga_beli) || 0) : ""}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^\d]/g, "");
+                    setStokFormData({ ...stokFormData, harga_beli: value });
+                  }}
+                  placeholder="Rp 0"
+                />
                 <p className="text-xs text-muted-foreground">Total harga pembelian batch ini. Gunakan ini untuk tracking HPP akurat di laporan keuntungan</p>
               </div>
 

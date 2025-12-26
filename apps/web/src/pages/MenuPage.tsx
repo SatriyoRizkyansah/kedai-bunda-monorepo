@@ -81,6 +81,8 @@ export function MenuPage() {
         tersedia: item.tersedia,
         stok: (item.stok || 0).toString(),
         kelola_stok_mandiri: item.kelola_stok_mandiri ?? true,
+        gambar: null, // Jangan set file di edit, hanya preview
+        gambar_preview: item.gambar || "",
       });
     } else {
       setEditingItem(null);
@@ -99,29 +101,37 @@ export function MenuPage() {
     e.preventDefault();
     setFormLoading(true);
 
-    const payload = {
-      nama: formData.nama,
-      kategori: formData.kategori,
-      harga_jual: parseFloat(formData.harga),
-      deskripsi: formData.deskripsi,
-      tersedia: formData.tersedia,
-      stok: parseFloat(formData.stok),
-      kelola_stok_mandiri: formData.kelola_stok_mandiri,
-    };
+    const formDataToSend = new FormData();
+    formDataToSend.append("nama", formData.nama);
+    formDataToSend.append("kategori", formData.kategori);
+    formDataToSend.append("harga_jual", parseFloat(formData.harga).toString());
+    formDataToSend.append("deskripsi", formData.deskripsi);
+    formDataToSend.append("tersedia", formData.tersedia.toString());
+    formDataToSend.append("stok", parseFloat(formData.stok).toString());
+    formDataToSend.append("kelola_stok_mandiri", formData.kelola_stok_mandiri.toString());
+
+    // HANYA append gambar jika ada File object (bukan preview string dan bukan null)
+    if (formData.gambar instanceof File) {
+      formDataToSend.append("gambar", formData.gambar);
+    }
 
     try {
       if (editingItem) {
-        await api.put(`/menu/${editingItem.id}`, payload);
-        notify.success("Menu berhasil diupdate");
+        await api.post(`/menu/${editingItem.id}?_method=PUT`, formDataToSend);
       } else {
-        await api.post("/menu", payload);
-        notify.success("Menu berhasil ditambahkan");
+        await api.post("/menu", formDataToSend);
       }
+      notify.success(editingItem ? "Menu berhasil diupdate" : "Menu berhasil ditambahkan");
       handleCloseDialog();
       fetchMenu();
     } catch (error: any) {
       console.error("Error saving:", error);
-      notify.error(error?.response?.data?.pesan || "Gagal menyimpan menu");
+      const errorMsg = error?.response?.data?.errors || error?.response?.data?.pesan || "Gagal menyimpan menu";
+      console.error("Detail error:", errorMsg);
+      if (errorMsg.gambar) {
+        console.error("Gambar errors:", errorMsg.gambar);
+      }
+      notify.error(typeof errorMsg === "object" ? JSON.stringify(errorMsg) : errorMsg);
     } finally {
       setFormLoading(false);
     }
