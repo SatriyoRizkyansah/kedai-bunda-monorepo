@@ -18,6 +18,8 @@ export function BahanBakuTab() {
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<BahanBaku | null>(null);
+  const [userRole, setUserRole] = useState<string>("");
+  const isAdmin = userRole === "admin" || userRole === "super_admin";
   const [formData, setFormData] = useState({
     nama: "",
     satuan_id: "",
@@ -51,6 +53,11 @@ export function BahanBakuTab() {
     fetchBahanBaku();
     fetchSatuan();
     fetchKonversi();
+  }, []);
+
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    setUserRole(user?.role || "");
   }, []);
 
   const fetchBahanBaku = async () => {
@@ -249,7 +256,7 @@ export function BahanBakuTab() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Cari bahan baku..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
         </div>
-        <Button onClick={() => handleOpenDialog()} className="gap-2">
+        <Button onClick={() => handleOpenDialog()} className="gap-2" style={!isAdmin ? { display: "none" } : {}}>
           <Plus className="h-4 w-4" />
           Tambah Bahan Baku
         </Button>
@@ -301,21 +308,29 @@ export function BahanBakuTab() {
                       </TableCell>
                       <TableCell>
                         <div className="flex justify-center gap-1">
-                          <Button onClick={() => handleOpenStokDialog(item, "tambah")} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-green-500/10 hover:text-green-600" title="Tambah Stok">
-                            <PackagePlus className="h-4 w-4" />
-                          </Button>
-                          <Button onClick={() => handleOpenStokDialog(item, "kurang")} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-orange-500/10 hover:text-orange-600" title="Kurangi Stok">
-                            <PackageMinus className="h-4 w-4" />
-                          </Button>
+                          {isAdmin && (
+                            <>
+                              <Button onClick={() => handleOpenStokDialog(item, "tambah")} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-green-500/10 hover:text-green-600" title="Tambah Stok">
+                                <PackagePlus className="h-4 w-4" />
+                              </Button>
+                              <Button onClick={() => handleOpenStokDialog(item, "kurang")} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-orange-500/10 hover:text-orange-600" title="Kurangi Stok">
+                                <PackageMinus className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
                           <Button onClick={() => handleOpenHistori(item)} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-blue-500/10 hover:text-blue-600" title="Riwayat Stok">
                             <History className="h-4 w-4" />
                           </Button>
-                          <Button onClick={() => handleOpenDialog(item)} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary" title="Edit">
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10" title="Hapus" onClick={() => handleDelete(item.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {isAdmin && (
+                            <>
+                              <Button onClick={() => handleOpenDialog(item)} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary" title="Edit">
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10" title="Hapus" onClick={() => handleDelete(item.id)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

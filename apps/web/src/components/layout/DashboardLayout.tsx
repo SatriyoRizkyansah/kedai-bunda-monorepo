@@ -213,9 +213,14 @@ export function DashboardLayout({ children }: NavbarProps) {
   const menuItems = useMemo(() => {
     const baseItems = [{ href: "/dashboard", label: "Dashboard", icon: Home }];
 
-    // Inventory and Menu - only for admin and super_admin
+    // Inventory - for admin, kasir and super_admin
+    if (user && (user.role === "admin" || user.role === "super_admin" || (user.role as any) === "kasir")) {
+      baseItems.push({ href: "/inventori", label: "Inventori", icon: Package });
+    }
+
+    // Menu - only for admin and super_admin
     if (user && (user.role === "admin" || user.role === "super_admin")) {
-      baseItems.push({ href: "/inventori", label: "Inventori", icon: Package }, { href: "/menu", label: "Menu", icon: UtensilsCrossed });
+      baseItems.push({ href: "/menu", label: "Menu", icon: UtensilsCrossed });
     }
 
     // Transaksi - only for kasir and super_admin

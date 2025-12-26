@@ -45,13 +45,19 @@ Route::middleware(['auth:api'])->group(function () {
     Route::get('satuan/grouped', [SatuanController::class, 'groupedByTipe']);
     Route::get('satuan/{satuan}', [SatuanController::class, 'show']);
 
-    // Bahan Baku (admin dan super_admin)
+    // Bahan Baku - read access untuk semua role (untuk inventori view)
+    Route::get('bahan-baku', [BahanBakuController::class, 'index']);
+    Route::get('bahan-baku/{id}', [BahanBakuController::class, 'show']);
+    Route::get('bahan-baku/{id}/stok-log', [BahanBakuController::class, 'stokLog']);
+    Route::get('bahan-baku/{id}/batch-tracking', [BahanBakuController::class, 'batchTracking']);
+    
+    // Bahan Baku - write access hanya untuk admin dan super_admin
     Route::middleware('role:super_admin,admin')->group(function () {
-        Route::apiResource('bahan-baku', BahanBakuController::class);
+        Route::post('bahan-baku', [BahanBakuController::class, 'store']);
+        Route::put('bahan-baku/{id}', [BahanBakuController::class, 'update']);
+        Route::delete('bahan-baku/{id}', [BahanBakuController::class, 'destroy']);
         Route::post('bahan-baku/{id}/tambah-stok', [BahanBakuController::class, 'tambahStok']);
         Route::post('bahan-baku/{id}/kurangi-stok', [BahanBakuController::class, 'kurangiStok']);
-        Route::get('bahan-baku/{id}/stok-log', [BahanBakuController::class, 'stokLog']);
-        Route::get('bahan-baku/{id}/batch-tracking', [BahanBakuController::class, 'batchTracking']);
         
         // Konversi Bahan
         Route::apiResource('konversi-bahan', KonversiBahanController::class);

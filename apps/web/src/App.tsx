@@ -31,7 +31,7 @@ function AppRoutes() {
       <Route
         path="/inventori"
         element={
-          <ProtectedRoute requiredRole={["admin", "super_admin"]}>
+          <ProtectedRoute requiredRole={["admin", "super_admin", "kasir"]}>
             <InventoriPage />
           </ProtectedRoute>
         }
