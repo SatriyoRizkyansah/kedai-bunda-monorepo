@@ -9,6 +9,7 @@ import type { Transaksi, Menu } from "@/lib/types";
 import { ShoppingCart, Calendar, DollarSign, History } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { notify } from "@/lib/notify";
+import { playTransactionSound } from "@/lib/sound";
 
 import { POSTab } from "@/pages/transaksi/POSTab";
 import { RiwayatTab } from "@/pages/transaksi/RiwayatTab";
@@ -135,6 +136,8 @@ export function TransaksiPage() {
       clearCart();
       fetchTransaksi();
       notify.success("Transaksi berhasil!");
+      // Play success sound
+      await playTransactionSound();
     } catch (error: unknown) {
       const err = error as { response?: { data?: { pesan?: string } } };
       notify.error(err.response?.data?.pesan || "Gagal menyimpan transaksi");
