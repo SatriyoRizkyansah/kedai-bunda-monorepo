@@ -317,4 +317,21 @@ class KonversiBahanController extends Controller
             'pesan' => 'Konversi bahan berhasil dihapus'
         ]);
     }
+
+    /**
+     * Get conversion suggestions by bahan baku ID
+     * Used to show templates for a specific ingredient
+     */
+    public function getByBahanBaku($id)
+    {
+        $konversi = KonversiBahan::where('bahan_baku_id', $id)
+            ->with(['bahanBaku', 'satuan'])
+            ->get();
+
+        return response()->json([
+            'sukses' => true,
+            'pesan' => 'Daftar konversi untuk bahan baku',
+            'data' => $konversi
+        ]);
+    }
 }

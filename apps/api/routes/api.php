@@ -60,6 +60,7 @@ Route::middleware(['auth:api'])->group(function () {
         Route::post('bahan-baku/{id}/kurangi-stok', [BahanBakuController::class, 'kurangiStok']);
         
         // Konversi Bahan
+        Route::get('konversi-bahan/bahan-baku/{id}', [KonversiBahanController::class, 'getByBahanBaku']);
         Route::apiResource('konversi-bahan', KonversiBahanController::class);
         
         // Master Data Satuan (CRUD hanya admin)

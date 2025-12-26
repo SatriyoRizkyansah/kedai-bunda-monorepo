@@ -48,6 +48,8 @@ export function BahanBakuTab() {
   const [batchEstimates, setBatchEstimates] = useState<{ [key: number]: any }>({});
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmTargetId, setConfirmTargetId] = useState<number | null>(null);
+  const [konversiSuggestions, setKonversiSuggestions] = useState<any[]>([]);
+  const [activeKonversi, setActiveKonversi] = useState<any>(null); // Template konversi yang dipilih untuk stok input
 
   useEffect(() => {
     fetchBahanBaku();
@@ -107,6 +109,33 @@ export function BahanBakuTab() {
   const filteredBahanBaku = bahanBaku.filter((item) => item.nama.toLowerCase().includes(searchTerm.toLowerCase()));
   const isLowStock = (item: BahanBaku) => Number(item.stok_tersedia || 0) < 10;
 
+  const loadKonversiSuggestions = async (bahanId: number) => {
+    try {
+      const response = await api.get(`/konversi-bahan/bahan-baku/${bahanId}`);
+      setKonversiSuggestions(response.data.data || []);
+    } catch (error) {
+      console.error("Error fetching konversi suggestions:", error);
+      setKonversiSuggestions([]);
+    }
+  };
+
+  // Cari konversi template berdasarkan nama bahan (untuk tambah baru)
+  const loadKonversiSuggestionsByName = (bahanName: string) => {
+    if (!bahanName.trim() || !_konversiList.length) {
+      setKonversiSuggestions([]);
+      return;
+    }
+
+    const suggestions = _konversiList.filter((k) => {
+      const matchingBahan = bahanBaku.find((b) => b.id === k.bahan_baku_id);
+      if (!matchingBahan) return false;
+      // Fuzzy match: cek apakah nama bahan yang diinput terdapat di nama existing
+      return matchingBahan.nama.toLowerCase().includes(bahanName.toLowerCase()) || bahanName.toLowerCase().includes(matchingBahan.nama.toLowerCase());
+    });
+
+    setKonversiSuggestions(suggestions);
+  };
+
   const handleOpenDialog = (item?: BahanBaku) => {
     if (item) {
       setEditingItem(item);
@@ -119,6 +148,8 @@ export function BahanBakuTab() {
         keterangan: item.keterangan || "",
         aktif: item.aktif,
       });
+      // Load konversi suggestions untuk bahan yang sedang diedit
+      loadKonversiSuggestions(item.id);
     } else {
       setEditingItem(null);
       setFormData({
@@ -130,6 +161,7 @@ export function BahanBakuTab() {
         keterangan: "",
         aktif: true,
       });
+      setKonversiSuggestions([]);
     }
     setDialogOpen(true);
   };
@@ -200,6 +232,15 @@ export function BahanBakuTab() {
       base_satuan_id: item.base_satuan_id?.toString() || "",
       harga_beli: "",
     });
+
+    // Load konversi template untuk bahan ini jika ada base_satuan
+    if (item.id && item.base_satuan_id) {
+      const konversi = _konversiList.find((k) => k.bahan_baku_id === item.id);
+      setActiveKonversi(konversi || null);
+    } else {
+      setActiveKonversi(null);
+    }
+
     setStokDialogOpen(true);
   };
 
@@ -354,7 +395,18 @@ export function BahanBakuTab() {
                 <label className="text-sm font-medium">
                   Nama Bahan <span className="text-destructive">*</span>
                 </label>
-                <Input value={formData.nama} onChange={(e) => setFormData({ ...formData, nama: e.target.value })} placeholder="Contoh: Ayam" required />
+                <Input
+                  value={formData.nama}
+                  onChange={(e) => {
+                    setFormData({ ...formData, nama: e.target.value });
+                    // Jika tambah baru (bukan edit), cari suggestion berdasarkan nama
+                    if (!editingItem) {
+                      loadKonversiSuggestionsByName(e.target.value);
+                    }
+                  }}
+                  placeholder="Contoh: Ayam"
+                  required
+                />
               </div>
 
               <Card className="bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
@@ -435,6 +487,32 @@ export function BahanBakuTab() {
                 <label className="text-sm font-medium">Keterangan</label>
                 <Input value={formData.keterangan} onChange={(e) => setFormData({ ...formData, keterangan: e.target.value })} placeholder="Keterangan tambahan (opsional)" />
               </div>
+
+              {/* Konversi Suggestions - Saat edit atau tambah baru */}
+              {konversiSuggestions.length > 0 && (
+                <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+                  <CardContent className="p-4">
+                    <p className="text-sm font-semibold text-green-700 dark:text-green-400 mb-3">📋 Template Konversi {editingItem ? "untuk Bahan Ini" : `untuk "${formData.nama}"`}</p>
+                    <div className="space-y-2">
+                      {konversiSuggestions.map((suggestion: any) => (
+                        <div key={suggestion.id} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded-md border border-green-200 dark:border-green-700">
+                          <div>
+                            <p className="text-sm font-medium">
+                              {suggestion.jumlah_konversi} {suggestion.satuan?.nama}
+                            </p>
+                            {suggestion.keterangan && <p className="text-xs text-muted-foreground">{suggestion.keterangan}</p>}
+                          </div>
+                          <Badge variant="outline" className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
+                            Template
+                          </Badge>
+                        </div>
+                      ))}
+                      ```{" "}
+                    </div>
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-2">Template ini bisa digunakan saat konversi satuan di tab Konversi</p>
+                  </CardContent>
+                </Card>
+              )}
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={handleCloseDialog}>
@@ -469,10 +547,34 @@ export function BahanBakuTab() {
               {stokDialogType === "tambah" && stokItem?.base_satuan_id && (
                 <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800">
                   <p className="text-xs font-medium text-blue-700 dark:text-blue-400 mb-2">📦 Tracking Bahan Mentah (Opsional)</p>
+                  {activeKonversi && (
+                    <div className="bg-white dark:bg-gray-800 p-2 rounded mb-2 border border-blue-100 dark:border-blue-900">
+                      <p className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                        💡 Template: 1 {stokItem.base_satuan?.nama || stokItem.base_satuan?.singkatan} = {activeKonversi.jumlah_konversi} {activeKonversi.satuan?.nama}
+                      </p>
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="text-xs font-medium">Jumlah Bahan Mentah</label>
-                      <Input type="number" step="0.01" value={stokFormData.base_jumlah} onChange={(e) => setStokFormData({ ...stokFormData, base_jumlah: e.target.value })} placeholder="contoh: 2" />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={stokFormData.base_jumlah}
+                        onChange={(e) => {
+                          const baseJumlah = parseFloat(e.target.value) || 0;
+                          setStokFormData({ ...stokFormData, base_jumlah: e.target.value });
+
+                          // Auto-calculate jumlah simpan berdasarkan template konversi
+                          if (activeKonversi && baseJumlah > 0) {
+                            const calculatedJumlah = baseJumlah * activeKonversi.jumlah_konversi;
+                            setStokFormData((prev) => ({ ...prev, jumlah: calculatedJumlah.toString() }));
+                          } else {
+                            setStokFormData((prev) => ({ ...prev, jumlah: "" }));
+                          }
+                        }}
+                        placeholder="contoh: 2"
+                      />
                     </div>
                     <div>
                       <label className="text-xs font-medium">Satuan Bahan Mentah</label>
@@ -484,8 +586,16 @@ export function BahanBakuTab() {
               )}
 
               <div className="grid gap-2">
-                <label className="text-sm font-medium">Jumlah</label>
-                <Input type="number" step="0.01" min="0" value={stokFormData.jumlah} onChange={(e) => setStokFormData({ ...stokFormData, jumlah: e.target.value })} required />
+                <label className="text-sm font-medium">Jumlah {activeKonversi && stokFormData.base_jumlah && <span className="text-xs text-muted-foreground">(auto dari template)</span>}</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={stokFormData.jumlah}
+                  onChange={(e) => setStokFormData({ ...stokFormData, jumlah: e.target.value })}
+                  required
+                  className={activeKonversi && stokFormData.base_jumlah ? "bg-blue-50 dark:bg-blue-900/20" : ""}
+                />
               </div>
 
               <div className="grid gap-2">
