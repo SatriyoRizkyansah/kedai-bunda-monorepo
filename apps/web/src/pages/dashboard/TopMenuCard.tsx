@@ -26,9 +26,10 @@ export function TopMenuCard({ data }: TopMenuCardProps) {
                 <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={{ stroke: "hsl(var(--border))" }} />
                 <YAxis type="category" dataKey="nama" width={100} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={{ stroke: "hsl(var(--border))" }} />
                 <Tooltip
-                  formatter={(value: number, name: string) => {
-                    if (name === "terjual") return [`${value} pcs`, "Terjual"];
-                    return [formatCurrencyFull(value), "Pendapatan"];
+                  formatter={(value, name: string) => {
+                    const numValue = typeof value === "number" ? value : 0;
+                    if (name === "terjual") return [`${numValue} pcs`, "Terjual"];
+                    return [formatCurrencyFull(numValue), "Pendapatan"];
                   }}
                   contentStyle={{
                     backgroundColor: "hsl(var(--card))",

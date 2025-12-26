@@ -31,7 +31,10 @@ export function RevenueTrendCard({ data }: RevenueTrendCardProps) {
               <XAxis dataKey="hari" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={{ stroke: "hsl(var(--border))" }} />
               <YAxis tickFormatter={(value) => formatCurrency(value)} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={{ stroke: "hsl(var(--border))" }} width={70} />
               <Tooltip
-                formatter={(value: number) => [formatCurrencyFull(value), "Pendapatan"]}
+                formatter={(value) => {
+                  const numValue = typeof value === "number" ? value : 0;
+                  return [formatCurrencyFull(numValue), "Pendapatan"];
+                }}
                 labelFormatter={(label) => `Hari: ${label}`}
                 contentStyle={{
                   backgroundColor: "hsl(var(--card))",

@@ -39,7 +39,10 @@ export function CategorySalesCard({ data }: CategorySalesCardProps) {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: number) => [formatCurrencyFull(value), "Total"]}
+                  formatter={(value) => {
+                    const numValue = typeof value === "number" ? value : 0;
+                    return [formatCurrencyFull(numValue), "Total"];
+                  }}
                   contentStyle={{
                     backgroundColor: "hsl(var(--card))",
                     border: "1px solid hsl(var(--border))",

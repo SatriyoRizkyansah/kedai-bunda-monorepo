@@ -9,14 +9,13 @@ import type { Transaksi, Menu } from "@/lib/types";
 import { ShoppingCart, Calendar, DollarSign, History } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { notify } from "@/lib/notify";
-import { playTransactionSound } from "@/lib/sound";
-
 import { POSTab } from "@/pages/transaksi/POSTab";
 import { RiwayatTab } from "@/pages/transaksi/RiwayatTab";
 import { MobileCartDialog } from "@/pages/transaksi/MobileCartDialog";
 import { TransaksiDetailDialog } from "@/pages/transaksi/TransaksiDetailDialog";
 import type { CartItem, MetodePembayaran } from "@/pages/transaksi/types";
 import { filterMenu, filterTransaksi, calculateTotal, getCartItemCount } from "@/pages/transaksi/utils";
+import { playTransactionSound } from "@/lib/sound";
 
 export function TransaksiPage() {
   const [transaksi, setTransaksi] = useState<Transaksi[]>([]);
