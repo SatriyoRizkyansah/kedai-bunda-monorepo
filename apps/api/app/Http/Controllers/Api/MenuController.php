@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\MenuResource;
 use App\Models\Menu;
 use App\Models\MenuStokLog;
+use App\Models\KomposisiMenu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -60,7 +61,7 @@ class MenuController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Menu::with(['komposisiMenu.konversiBahan.bahanBaku', 'komposisiMenu.konversiBahan.satuan']);
+    $query = Menu::with(['komposisiMenu.bahanBaku.satuan', 'komposisiMenu.satuan']);
 
         // Filter berdasarkan kategori
         if ($request->has('kategori')) {
@@ -135,11 +136,11 @@ class MenuController extends Controller
             'nama' => 'required|string|max:255',
             'kategori' => 'required|in:makanan,minuman',
             'harga_jual' => 'required|numeric|min:0',
-            'gambar' => 'nullable|string',
+            'gambar' => 'nullable|file|max:2048',
             'deskripsi' => 'nullable|string',
-            'tersedia' => 'boolean',
+            'tersedia' => 'nullable|in:true,false,1,0',
             'stok' => 'nullable|numeric|min:0',
-            'kelola_stok_mandiri' => 'boolean',
+            'kelola_stok_mandiri' => 'nullable|in:true,false,1,0',
             'satuan_id' => 'nullable|exists:satuan,id',
         ]);
 
@@ -152,9 +153,26 @@ class MenuController extends Controller
         }
 
         $data = $request->all();
-        // Default kelola_stok_mandiri = true (stok manual)
-        if (!isset($data['kelola_stok_mandiri'])) {
+        
+        // Convert string boolean ke boolean
+        if (isset($data['tersedia'])) {
+            $data['tersedia'] = in_array($data['tersedia'], ['true', '1', true, 1]);
+        } else {
+            $data['tersedia'] = true;
+        }
+        
+        if (isset($data['kelola_stok_mandiri'])) {
+            $data['kelola_stok_mandiri'] = in_array($data['kelola_stok_mandiri'], ['true', '1', true, 1]);
+        } else {
             $data['kelola_stok_mandiri'] = true;
+        }
+        
+        // Handle file upload
+        if ($request->hasFile('gambar')) {
+            $file = $request->file('gambar');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $file->storeAs('menu', $filename, 'public');
+            $data['gambar'] = '/storage/menu/' . $filename;
         }
 
         $menu = Menu::create($data);
@@ -223,7 +241,7 @@ class MenuController extends Controller
      */
     public function show($id)
     {
-        $menu = Menu::with(['komposisiMenu.konversiBahan.bahanBaku', 'komposisiMenu.konversiBahan.satuan'])->find($id);
+    $menu = Menu::with(['komposisiMenu.bahanBaku.satuan', 'komposisiMenu.satuan'])->find($id);
 
         if (!$menu) {
             return response()->json([
@@ -309,11 +327,11 @@ class MenuController extends Controller
             'nama' => 'sometimes|string|max:255',
             'kategori' => 'sometimes|in:makanan,minuman',
             'harga_jual' => 'sometimes|numeric|min:0',
-            'gambar' => 'nullable|string',
+            'gambar' => 'nullable|file|max:2048',
             'deskripsi' => 'nullable|string',
-            'tersedia' => 'boolean',
+            'tersedia' => 'nullable|in:true,false,1,0',
             'stok' => 'nullable|numeric|min:0',
-            'kelola_stok_mandiri' => 'boolean',
+            'kelola_stok_mandiri' => 'nullable|in:true,false,1,0',
             'satuan_id' => 'nullable|exists:satuan,id',
         ]);
 
@@ -325,7 +343,44 @@ class MenuController extends Controller
             ], 422);
         }
 
-        $menu->update($request->all());
+        $data = $request->all();
+        
+        // Convert string boolean ke boolean
+        if (isset($data['tersedia'])) {
+            $data['tersedia'] = in_array($data['tersedia'], ['true', '1', true, 1]);
+        }
+        
+        if (isset($data['kelola_stok_mandiri'])) {
+            $data['kelola_stok_mandiri'] = in_array($data['kelola_stok_mandiri'], ['true', '1', true, 1]);
+        }
+        
+        // Handle file upload - hanya jika ada file baru (frontend hanya kirim jika File object)
+        if ($request->hasFile('gambar')) {
+            // Hapus file lama jika ada
+            if ($menu->gambar) {
+                $oldPath = public_path($menu->gambar);
+                if (file_exists($oldPath)) {
+                    unlink($oldPath);
+                }
+            }
+            
+            $file = $request->file('gambar');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $file->storeAs('menu', $filename, 'public');
+            $data['gambar'] = '/storage/menu/' . $filename;
+        } else {
+            // Jangan update gambar jika tidak ada file baru
+            unset($data['gambar']);
+        }
+
+        // Jika menu diubah dari "Terhubung Bahan Baku" (false) ke "Manual" (true), hapus semua komposisi
+        if ($request->has('kelola_stok_mandiri') && 
+            $request->kelola_stok_mandiri === true && 
+            $menu->kelola_stok_mandiri === false) {
+            KomposisiMenu::where('menu_id', $menu->id)->delete();
+        }
+
+        $menu->update($data);
 
         return response()->json([
             'sukses' => true,
@@ -432,7 +487,7 @@ class MenuController extends Controller
      */
     public function cekStok($id)
     {
-        $menu = Menu::with(['komposisiMenu.konversiBahan.bahanBaku', 'komposisiMenu.konversiBahan.satuan'])->find($id);
+    $menu = Menu::with(['komposisiMenu.bahanBaku.satuan', 'komposisiMenu.satuan'])->find($id);
 
         if (!$menu) {
             return response()->json([
@@ -445,26 +500,22 @@ class MenuController extends Controller
         $kekuranganBahan = [];
 
         foreach ($menu->komposisiMenu as $komposisi) {
-            $konversiBahan = $komposisi->konversiBahan;
-            if (!$konversiBahan || !$konversiBahan->bahanBaku) {
+                $bahanBaku = $komposisi->bahanBaku;
+                if (!$bahanBaku || $komposisi->jumlah <= 0) {
                 continue;
             }
             
-            $bahanBaku = $konversiBahan->bahanBaku;
-            $satuan = $konversiBahan->satuan;
-            
-            // Hitung kebutuhan dalam satuan dasar
-            // Misal: butuh 1 potong, 1 ekor = 9 potong, maka butuh 1/9 = 0.111 ekor
-            $kebutuhanDalamSatuanDasar = $komposisi->jumlah / $konversiBahan->jumlah_konversi;
-            
-            if ($bahanBaku->stok_tersedia < $kebutuhanDalamSatuanDasar) {
+                $satuan = $komposisi->satuan ?? $bahanBaku->satuan;
+                $kebutuhan = (float) $komposisi->jumlah;
+                $stokTersedia = (float) $bahanBaku->stok_tersedia;
+
+                if ($stokTersedia < $kebutuhan) {
                 $tersedia = false;
                 $kekuranganBahan[] = [
                     'bahan' => $bahanBaku->nama,
-                    'dibutuhkan' => round($kebutuhanDalamSatuanDasar, 4) . ' ' . $bahanBaku->satuan_dasar,
-                    'dibutuhkan_konversi' => $komposisi->jumlah . ' ' . ($satuan->nama ?? 'satuan'),
-                    'tersedia' => $bahanBaku->stok_tersedia . ' ' . $bahanBaku->satuan_dasar,
-                    'satuan_dasar' => $bahanBaku->satuan_dasar
+                        'dibutuhkan' => round($kebutuhan, 2) . ' ' . ($satuan?->nama ?? $bahanBaku->satuan?->nama ?? 'satuan'),
+                        'tersedia' => round($stokTersedia, 2) . ' ' . ($satuan?->nama ?? $bahanBaku->satuan?->nama ?? 'satuan'),
+                        'satuan' => $satuan?->nama ?? $bahanBaku->satuan?->nama ?? $bahanBaku->satuan_dasar,
                 ];
             }
         }
@@ -501,6 +552,7 @@ class MenuController extends Controller
         $validator = Validator::make($request->all(), [
             'jumlah' => 'required|numeric|min:0.01',
             'keterangan' => 'nullable|string|max:500',
+            'harga_beli' => 'nullable|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -521,6 +573,7 @@ class MenuController extends Controller
             'user_id' => $request->user()->id,
             'tipe' => 'masuk',
             'jumlah' => $request->jumlah,
+            'harga_beli' => $request->harga_beli,
             'stok_sebelum' => $stokSebelum,
             'stok_sesudah' => $stokSesudah,
             'keterangan' => $request->keterangan,
@@ -560,6 +613,7 @@ class MenuController extends Controller
         $validator = Validator::make($request->all(), [
             'jumlah' => 'required|numeric|min:0.01',
             'keterangan' => 'nullable|string|max:500',
+            'harga_beli' => 'nullable|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -587,6 +641,7 @@ class MenuController extends Controller
             'user_id' => $request->user()->id,
             'tipe' => 'keluar',
             'jumlah' => $request->jumlah,
+            'harga_beli' => $request->harga_beli,
             'stok_sebelum' => $stokSebelum,
             'stok_sesudah' => $stokSesudah,
             'keterangan' => $request->keterangan,
@@ -632,7 +687,7 @@ class MenuController extends Controller
      */
     public function getStokEfektif($id)
     {
-        $menu = Menu::with(['komposisiMenu.konversiBahan.bahanBaku', 'komposisiMenu.konversiBahan.satuan', 'satuan'])->find($id);
+    $menu = Menu::with(['komposisiMenu.bahanBaku.satuan', 'komposisiMenu.satuan', 'satuan'])->find($id);
 
         if (!$menu) {
             return response()->json([

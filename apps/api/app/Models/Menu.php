@@ -46,13 +46,12 @@ class Menu extends Model
     }
 
     /**
-     * Relasi ke bahan baku melalui komposisi menu dan konversi_bahan
-     * Note: Tidak lagi direct karena sekarang pakai konversi_bahan
+     * Relasi ke bahan baku melalui komposisi menu
      */
     public function getBahanBakuViaKomposisiAttribute()
     {
-        return $this->komposisiMenu->map(function($komposisi) {
-            return $komposisi->konversiBahan?->bahanBaku;
+        return $this->komposisiMenu->map(function ($komposisi) {
+            return $komposisi->bahanBaku;
         })->filter();
     }
 
@@ -82,7 +81,7 @@ class Menu extends Model
             return $this->stok;
         }
 
-        $komposisi = $this->komposisiMenu()->with('konversiBahan.bahanBaku')->get();
+        $komposisi = $this->komposisiMenu()->with('bahanBaku')->get();
         
         if ($komposisi->isEmpty()) {
             return 0;
@@ -91,21 +90,20 @@ class Menu extends Model
         $stokTerkecil = PHP_FLOAT_MAX;
 
         foreach ($komposisi as $item) {
-            $konversiBahan = $item->konversiBahan;
-            $bahanBaku = $konversiBahan?->bahanBaku;
-            if (!$bahanBaku || !$konversiBahan || $item->jumlah <= 0) {
+            $bahanBaku = $item->bahanBaku;
+
+            if (!$bahanBaku || $item->jumlah <= 0) {
                 continue;
             }
 
-            // Hitung berapa menu yang bisa dibuat dari bahan ini
-            // Contoh: Stok ayam = 2 ekor, 1 ekor = 9 potong, butuh 1 potong per menu
-            // Stok dalam satuan konversi = 2 * 9 = 18 potong
-            // Menu bisa dibuat = 18 / 1 = 18 menu
-            $stokDalamSatuanDasar = $bahanBaku->stok_tersedia; // misal 2 ekor
-            $stokDalamSatuanKonversi = $stokDalamSatuanDasar * $konversiBahan->jumlah_konversi; // 2 * 9 = 18 potong
-            $kebutuhanPerMenu = $item->jumlah; // 1 potong
-            
-            $menuDariBahan = floor($stokDalamSatuanKonversi / $kebutuhanPerMenu);
+            // Hitung berapa menu yang bisa dibuat dari stok bahan baku pada satuan akhir
+            $stokTersedia = (float) $bahanBaku->stok_tersedia;
+            $kebutuhanPerMenu = (float) $item->jumlah;
+            if ($kebutuhanPerMenu <= 0) {
+                continue;
+            }
+
+            $menuDariBahan = (int) floor($stokTersedia / $kebutuhanPerMenu);
             
             if ($menuDariBahan < $stokTerkecil) {
                 $stokTerkecil = $menuDariBahan;

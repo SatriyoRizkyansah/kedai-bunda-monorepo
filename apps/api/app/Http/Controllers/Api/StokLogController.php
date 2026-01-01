@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\StokLog;
 use App\Models\BahanBaku;
+use App\Models\BatchBahanBaku;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 class StokLogController extends Controller
 {
@@ -253,24 +255,68 @@ class StokLogController extends Controller
             ], 400);
         }
 
-        $stokSesudah = $stokSebelum - $request->jumlah;
-        $bahanBaku->update(['stok_tersedia' => $stokSesudah]);
+        DB::beginTransaction();
+        try {
+            $stokSesudah = $stokSebelum - $request->jumlah;
+            $bahanBaku->update(['stok_tersedia' => $stokSesudah]);
 
-        $stokLog = StokLog::create([
-            'bahan_baku_id' => $request->bahan_baku_id,
-            'user_id' => auth()->id(),
-            'tipe' => 'keluar',
-            'jumlah' => $request->jumlah,
-            'stok_sebelum' => $stokSebelum,
-            'stok_sesudah' => $stokSesudah,
-            'referensi' => 'ADJUST-' . date('YmdHis'),
-            'keterangan' => $request->keterangan
-        ]);
+            $stokLog = StokLog::create([
+                'bahan_baku_id' => $request->bahan_baku_id,
+                'user_id' => auth()->id(),
+                'tipe' => 'keluar',
+                'jumlah' => $request->jumlah,
+                'stok_sebelum' => $stokSebelum,
+                'stok_sesudah' => $stokSesudah,
+                'referensi' => 'ADJUST-' . date('YmdHis'),
+                'keterangan' => $request->keterangan
+            ]);
 
-        return response()->json([
-            'sukses' => true,
-            'pesan' => 'Stok berhasil dikurangi',
-            'data' => $stokLog->load(['bahanBaku', 'user'])
-        ], 201);
+            // Apply FIFO batch tracking
+            $this->reduceStockFIFO($request->bahan_baku_id, $request->jumlah);
+
+            DB::commit();
+
+            return response()->json([
+                'sukses' => true,
+                'pesan' => 'Stok berhasil dikurangi',
+                'data' => $stokLog->load(['bahanBaku', 'user'])
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'sukses' => false,
+                'pesan' => 'Gagal mengurangi stok: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Reduce stock using FIFO method
+     */
+    private function reduceStockFIFO(int $bahanBakuId, float $amount): void
+    {
+        $remaining = $amount;
+        
+        // Get active batches ordered by FIFO (oldest first)
+        $batches = BatchBahanBaku::where('bahan_baku_id', $bahanBakuId)
+            ->where('jumlah_sisa', '>', 0)
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        foreach ($batches as $batch) {
+            if ($remaining <= 0) {
+                break;
+            }
+
+            if ($batch->jumlah_sisa >= $remaining) {
+                // This batch has enough stock
+                $batch->decrement('jumlah_sisa', $remaining);
+                $remaining = 0;
+            } else {
+                // Consume entire batch and move to next
+                $remaining -= $batch->jumlah_sisa;
+                $batch->update(['jumlah_sisa' => 0]);
+            }
+        }
     }
 }

@@ -11,9 +11,11 @@ export interface User {
 export interface BahanBaku {
   id: number;
   nama: string;
-  satuan_id?: number;
-  satuan_dasar: string; // backward compat - derived from satuan.nama
+  satuan_id?: number | null;
+  base_satuan_id?: number | null;
+  satuan_dasar: string; // backward compat - derived dari satuan dasar
   satuan?: Satuan;
+  base_satuan?: Satuan;
   stok_tersedia: number;
   harga_per_satuan: number;
   keterangan?: string;
@@ -24,7 +26,10 @@ export interface BahanBaku {
   stok?: number;
   stok_minimum?: number;
   harga_satuan?: number;
-} // Menu types
+  konversi?: KonversiBahan[];
+}
+
+// Menu types
 export interface Menu {
   id: number;
   nama: string;
@@ -59,9 +64,9 @@ export interface Satuan {
 export interface KomposisiMenu {
   id?: number;
   menu_id: number;
-  konversi_bahan_id: number;
+  bahan_baku_id: number;
+  satuan_id?: number | null;
   jumlah: number;
-  konversi_bahan?: KonversiBahan;
   menu?: Menu;
   // Helper computed fields (dari backend)
   bahan_baku?: BahanBaku;

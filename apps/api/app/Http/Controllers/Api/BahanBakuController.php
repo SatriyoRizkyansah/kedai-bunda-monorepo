@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\BahanBakuResource;
 use App\Models\BahanBaku;
+use App\Models\BatchBahanBaku;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 class BahanBakuController extends Controller
 {
@@ -41,7 +43,7 @@ class BahanBakuController extends Controller
      */
     public function index()
     {
-        $bahanBaku = BahanBaku::with(['konversi', 'satuan'])->get();
+    $bahanBaku = BahanBaku::with(['konversi', 'satuan', 'baseSatuan'])->get();
         
         return response()->json([
             'sukses' => true,
@@ -87,6 +89,7 @@ class BahanBakuController extends Controller
         $validator = Validator::make($request->all(), [
             'nama' => 'required|string|max:255',
             'satuan_id' => 'required|exists:satuan,id',
+            'base_satuan_id' => 'nullable|exists:satuan,id',
             'satuan_dasar' => 'nullable|string|max:50', // deprecated, untuk backward compat
             'stok_tersedia' => 'required|numeric|min:0',
             'harga_per_satuan' => 'required|numeric|min:0',
@@ -104,7 +107,12 @@ class BahanBakuController extends Controller
 
         // Set satuan_dasar dari satuan untuk backward compatibility
         $data = $request->all();
-        if ($request->satuan_id) {
+        if ($request->base_satuan_id) {
+            $baseSatuan = \App\Models\Satuan::find($request->base_satuan_id);
+            if ($baseSatuan) {
+                $data['satuan_dasar'] = $baseSatuan->nama;
+            }
+        } elseif ($request->satuan_id) {
             $satuan = \App\Models\Satuan::find($request->satuan_id);
             if ($satuan) {
                 $data['satuan_dasar'] = $satuan->nama;
@@ -112,7 +120,7 @@ class BahanBakuController extends Controller
         }
 
         $bahanBaku = BahanBaku::create($data);
-        $bahanBaku->load('satuan');
+        $bahanBaku->load(['satuan', 'baseSatuan']);
 
         return response()->json([
             'sukses' => true,
@@ -275,6 +283,7 @@ class BahanBakuController extends Controller
         $validator = Validator::make($request->all(), [
             'nama' => 'sometimes|string|max:255',
             'satuan_id' => 'sometimes|exists:satuan,id',
+            'base_satuan_id' => 'sometimes|nullable|exists:satuan,id',
             'satuan_dasar' => 'sometimes|string|max:50', // deprecated
             'stok_tersedia' => 'sometimes|numeric|min:0',
             'harga_per_satuan' => 'sometimes|numeric|min:0',
@@ -292,7 +301,12 @@ class BahanBakuController extends Controller
 
         // Sync satuan_dasar dari satuan jika satuan_id diupdate
         $data = $request->all();
-        if ($request->has('satuan_id')) {
+        if ($request->has('base_satuan_id')) {
+            $baseSatuan = \App\Models\Satuan::find($request->base_satuan_id);
+            if ($baseSatuan) {
+                $data['satuan_dasar'] = $baseSatuan->nama;
+            }
+        } elseif ($request->has('satuan_id')) {
             $satuan = \App\Models\Satuan::find($request->satuan_id);
             if ($satuan) {
                 $data['satuan_dasar'] = $satuan->nama;
@@ -300,7 +314,7 @@ class BahanBakuController extends Controller
         }
 
         $bahanBaku->update($data);
-        $bahanBaku->load('satuan');
+        $bahanBaku->load(['satuan', 'baseSatuan']);
 
         return response()->json([
             'sukses' => true,
@@ -378,6 +392,10 @@ class BahanBakuController extends Controller
         $validator = Validator::make($request->all(), [
             'jumlah' => 'required|numeric|min:0.01',
             'keterangan' => 'nullable|string|max:500',
+            'base_jumlah' => 'nullable|numeric|min:0.01',
+            'base_satuan_id' => 'nullable|exists:satuan,id',
+            'konversi_bahan_id' => 'nullable|exists:konversi_bahan,id',
+            'harga_beli' => 'nullable|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -388,20 +406,51 @@ class BahanBakuController extends Controller
             ], 422);
         }
 
-        $log = $bahanBaku->tambahStok(
-            $request->jumlah,
-            $request->user()->id,
-            $request->keterangan
-        );
+        DB::beginTransaction();
+        try {
+            // Log stok entry dengan harga_beli
+            $log = $bahanBaku->tambahStok(
+                $request->jumlah,
+                $request->user()->id,
+                $request->keterangan,
+                null,
+                $request->base_jumlah,
+                $request->base_satuan_id ?? $bahanBaku->base_satuan_id,
+                $request->konversi_bahan_id,
+                $request->harga_beli
+            );
 
-        return response()->json([
-            'sukses' => true,
-            'pesan' => 'Stok berhasil ditambahkan',
-            'data' => [
-                'bahan_baku' => new BahanBakuResource($bahanBaku->fresh()),
-                'log' => $log,
-            ]
-        ]);
+            // Create batch for FIFO tracking (if base tracking provided)
+            if ($request->base_jumlah && ($request->base_satuan_id || $bahanBaku->base_satuan_id)) {
+                BatchBahanBaku::create([
+                    'bahan_baku_id' => $bahanBaku->id,
+                    'stok_log_id' => $log->id,
+                    'base_jumlah' => $request->base_jumlah,
+                    'base_satuan_id' => $request->base_satuan_id ?? $bahanBaku->base_satuan_id,
+                    'jumlah_awal' => $request->jumlah,
+                    'jumlah_sisa' => $request->jumlah,
+                    'harga_beli' => $request->harga_beli,
+                    'keterangan' => $request->keterangan ?? "Batch dari " . number_format($request->base_jumlah, 2) . " bahan mentah",
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'sukses' => true,
+                'pesan' => 'Stok berhasil ditambahkan',
+                'data' => [
+                    'bahan_baku' => new BahanBakuResource($bahanBaku->fresh('satuan', 'baseSatuan')),
+                    'log' => $log->load(['user', 'baseSatuan', 'konversiBahan']),
+                ]
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'sukses' => false,
+                'pesan' => 'Gagal menambah stok: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -421,6 +470,10 @@ class BahanBakuController extends Controller
         $validator = Validator::make($request->all(), [
             'jumlah' => 'required|numeric|min:0.01',
             'keterangan' => 'nullable|string|max:500',
+            'base_jumlah' => 'nullable|numeric|min:0.01',
+            'base_satuan_id' => 'nullable|exists:satuan,id',
+            'konversi_bahan_id' => 'nullable|exists:konversi_bahan,id',
+            'harga_beli' => 'nullable|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -438,20 +491,70 @@ class BahanBakuController extends Controller
             ], 422);
         }
 
-        $log = $bahanBaku->kurangiStok(
-            $request->jumlah,
-            $request->user()->id,
-            $request->keterangan
-        );
+        DB::beginTransaction();
+        try {
+            // Log stok reduction dengan harga_beli
+            $log = $bahanBaku->kurangiStok(
+                $request->jumlah,
+                $request->user()->id,
+                $request->keterangan,
+                null,
+                $request->base_jumlah,
+                $request->base_satuan_id ?? $bahanBaku->base_satuan_id,
+                $request->konversi_bahan_id,
+                $request->harga_beli
+            );
 
-        return response()->json([
-            'sukses' => true,
-            'pesan' => 'Stok berhasil dikurangi',
-            'data' => [
-                'bahan_baku' => new BahanBakuResource($bahanBaku->fresh()),
-                'log' => $log,
-            ]
-        ]);
+            // Apply FIFO: reduce from oldest batches first
+            $this->reduceStockFIFO($bahanBaku->id, $request->jumlah);
+
+            DB::commit();
+
+            return response()->json([
+                'sukses' => true,
+                'pesan' => 'Stok berhasil dikurangi',
+                'data' => [
+                    'bahan_baku' => new BahanBakuResource($bahanBaku->fresh('satuan', 'baseSatuan')),
+                    'log' => $log->load(['user', 'baseSatuan', 'konversiBahan']),
+                ]
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'sukses' => false,
+                'pesan' => 'Gagal mengurangi stok: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Reduce stock using FIFO method
+     */
+    private function reduceStockFIFO(int $bahanBakuId, float $amount): void
+    {
+        $remaining = $amount;
+        
+        // Get active batches ordered by FIFO (oldest first)
+        $batches = BatchBahanBaku::where('bahan_baku_id', $bahanBakuId)
+            ->where('jumlah_sisa', '>', 0)
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        foreach ($batches as $batch) {
+            if ($remaining <= 0) {
+                break;
+            }
+
+            if ($batch->jumlah_sisa >= $remaining) {
+                // This batch has enough stock
+                $batch->decrement('jumlah_sisa', $remaining);
+                $remaining = 0;
+            } else {
+                // Consume entire batch and move to next
+                $remaining -= $batch->jumlah_sisa;
+                $batch->update(['jumlah_sisa' => 0]);
+            }
+        }
     }
 
     /**
@@ -469,7 +572,7 @@ class BahanBakuController extends Controller
         }
 
         $logs = $bahanBaku->stokLog()
-            ->with('user:id,name')
+            ->with(['user:id,name', 'baseSatuan:id,nama,singkatan', 'konversiBahan'])
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
@@ -478,4 +581,54 @@ class BahanBakuController extends Controller
             'data' => $logs
         ]);
     }
+
+    /**
+     * Get batch tracking untuk bahan baku tertentu
+     */
+    public function batchTracking($id)
+    {
+        $bahanBaku = BahanBaku::with(['satuan', 'baseSatuan'])->find($id);
+
+        if (!$bahanBaku) {
+            return response()->json([
+                'sukses' => false,
+                'pesan' => 'Bahan baku tidak ditemukan'
+            ], 404);
+        }
+
+        // Get all batches (including consumed ones for history)
+        $batches = BatchBahanBaku::where('bahan_baku_id', $id)
+            ->with(['baseSatuan', 'stokLog'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Calculate remaining raw material
+        $totalBaseRemaining = 0;
+        $activeBatches = $batches->filter(function ($batch) use (&$totalBaseRemaining) {
+            if ($batch->jumlah_sisa > 0 && $batch->base_jumlah && $batch->jumlah_awal > 0) {
+                // Calculate remaining base material proportionally
+                $ratio = $batch->jumlah_sisa / $batch->jumlah_awal;
+                $baseRemaining = $batch->base_jumlah * $ratio;
+                $totalBaseRemaining += $baseRemaining;
+                return true;
+            }
+            return false;
+        });
+
+        return response()->json([
+            'sukses' => true,
+            'data' => [
+                'bahan_baku' => $bahanBaku,
+                'batches' => $batches,
+                'summary' => [
+                    'total_batches' => $batches->count(),
+                    'active_batches' => $activeBatches->count(),
+                    'total_converted_stock' => $bahanBaku->stok_tersedia,
+                    'estimated_base_remaining' => round($totalBaseRemaining, 2),
+                    'base_satuan' => $bahanBaku->baseSatuan,
+                ]
+            ]
+        ]);
+    }
 }
+

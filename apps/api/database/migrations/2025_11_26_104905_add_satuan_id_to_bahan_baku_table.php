@@ -13,10 +13,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // 1. Tambahkan kolom satuan_id (nullable dulu)
-        Schema::table('bahan_baku', function (Blueprint $table) {
-            $table->foreignId('satuan_id')->nullable()->after('nama')->constrained('satuan')->nullOnDelete();
-        });
+        // 1. Tambahkan kolom satuan_id (nullable dulu) - hanya jika belum ada
+        if (!Schema::hasColumn('bahan_baku', 'satuan_id')) {
+            Schema::table('bahan_baku', function (Blueprint $table) {
+                $table->foreignId('satuan_id')->nullable()->after('nama')->constrained('satuan')->nullOnDelete();
+            });
+        }
 
         // 2. Migrasi data - cari atau buat satuan berdasarkan satuan_dasar
         $bahanBakuList = DB::table('bahan_baku')->get();

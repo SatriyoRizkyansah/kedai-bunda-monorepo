@@ -18,7 +18,7 @@ return new class extends Migration
             $table->decimal('total', 12, 2);
             $table->decimal('bayar', 12, 2)->default(0);
             $table->decimal('kembalian', 12, 2)->default(0);
-            $table->enum('status', ['selesai', 'dibatalkan'])->default('selesai');
+            $table->enum('status', ['selesai', 'batal'])->default('selesai');
             $table->text('catatan')->nullable();
             $table->timestamps();
         });

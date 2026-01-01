@@ -2,10 +2,6 @@ import axios from "axios";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000/api",
-  headers: {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  },
   withCredentials: false,
 });
 
@@ -16,6 +12,16 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Jika data adalah FormData, jangan set Content-Type (biarkan browser auto-set dengan boundary)
+    if (config.data instanceof FormData) {
+      delete config.headers["Content-Type"];
+    } else {
+      // Untuk request biasa, set JSON
+      config.headers["Content-Type"] = "application/json";
+      config.headers["Accept"] = "application/json";
+    }
+
     return config;
   },
   (error) => {
@@ -27,7 +33,10 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Jangan redirect dari login page
+    const isLoginPage = window.location.pathname === "/login";
+
+    if (error.response?.status === 401 && !isLoginPage) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       window.location.href = "/login";

@@ -8,6 +8,7 @@ use App\Models\Menu;
 use App\Models\BahanBaku;
 use App\Models\User;
 use App\Models\StokLog;
+use App\Models\MenuStokLog;
 use App\Models\DetailTransaksi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -231,7 +232,7 @@ class DashboardController extends Controller
         $totalBayar = $transaksi->sum('bayar');
         $totalKembalian = $transaksi->sum('kembalian');
         
-        // Ringkasan per kategori
+        // Ringkasan per kategori dengan detail menu
         $penjualanPerKategori = DB::table('detail_transaksi')
             ->join('transaksi', 'detail_transaksi.transaksi_id', '=', 'transaksi.id')
             ->join('menu', 'detail_transaksi.menu_id', '=', 'menu.id')
@@ -247,6 +248,29 @@ class DashboardController extends Controller
                 DB::raw('SUM(detail_transaksi.subtotal) as total_pendapatan')
             )
             ->groupBy('menu.kategori')
+            ->get();
+
+        // Detail menu per kategori
+        $detailMenuPerKategori = DB::table('detail_transaksi')
+            ->join('transaksi', 'detail_transaksi.transaksi_id', '=', 'transaksi.id')
+            ->join('menu', 'detail_transaksi.menu_id', '=', 'menu.id')
+            ->whereBetween('transaksi.created_at', [
+                $tanggalMulai . ' 00:00:00',
+                $tanggalSelesai . ' 23:59:59'
+            ])
+            ->where('transaksi.status', 'selesai')
+            ->select(
+                'menu.id as menu_id',
+                'menu.nama',
+                'menu.kategori',
+                'menu.harga_jual',
+                DB::raw('SUM(detail_transaksi.jumlah) as total_terjual'),
+                DB::raw('SUM(detail_transaksi.subtotal) as total_pendapatan'),
+                DB::raw('COUNT(DISTINCT transaksi.id) as jumlah_transaksi')
+            )
+            ->groupBy('menu.id', 'menu.nama', 'menu.kategori', 'menu.harga_jual')
+            ->orderBy('menu.kategori', 'asc')
+            ->orderBy('total_pendapatan', 'desc')
             ->get();
 
         return response()->json([
@@ -265,6 +289,7 @@ class DashboardController extends Controller
                     'rata_rata_per_transaksi' => $totalTransaksi > 0 ? $totalPendapatan / $totalTransaksi : 0
                 ],
                 'per_kategori' => $penjualanPerKategori,
+                'detail_menu' => $detailMenuPerKategori,
                 'transaksi' => $transaksi
             ]
         ]);
@@ -392,37 +417,88 @@ class DashboardController extends Controller
         $tanggalSelesai = $request->input('tanggal_selesai', Carbon::now()->format('Y-m-d'));
         $bahanBakuId = $request->input('bahan_baku_id');
         
-        $query = StokLog::with(['bahanBaku', 'user'])
+        // Query StokLog (dari bahan baku batch)
+        $queryStokLog = StokLog::with(['bahanBaku', 'user'])
+            ->select('stok_log.*')
             ->whereBetween('created_at', [
                 $tanggalMulai . ' 00:00:00',
                 $tanggalSelesai . ' 23:59:59'
             ]);
             
         if ($bahanBakuId) {
-            $query->where('bahan_baku_id', $bahanBakuId);
+            $queryStokLog->where('bahan_baku_id', $bahanBakuId);
         }
         
-        $stokLogs = $query->orderBy('created_at', 'desc')->get();
+        $stokLogs = $queryStokLog->orderBy('created_at', 'desc')->get();
         
-        // Ringkasan stok masuk
-        $stokMasuk = $stokLogs->where('tipe', 'masuk');
+        // Query MenuStokLog (dari menu manual) - untuk items yang follow bahan baku
+        $menuStokLogs = collect([]);
+        if (!$bahanBakuId) { // Hanya ambil menu logs jika filter tidak spesifik ke bahan baku tertentu
+            $menuStokLogs = MenuStokLog::with(['menu', 'user'])
+                ->whereBetween('created_at', [
+                    $tanggalMulai . ' 00:00:00',
+                    $tanggalSelesai . ' 23:59:59'
+                ])
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
+        
+        // Transform MenuStokLog ke format StokLog untuk unified display
+        $menuLogsTransformed = $menuStokLogs->map(function($log) {
+            return [
+                'id' => 'menu_' . $log->id,
+                'bahan_baku_id' => null,
+                'menu_id' => $log->menu_id,
+                'user_id' => $log->user_id,
+                'tipe' => $log->tipe,
+                'jumlah' => $log->jumlah,
+                'base_satuan_id' => null,
+                'base_jumlah' => $log->jumlah, // Menu tidak punya base satuan conversion
+                'konversi_bahan_id' => null,
+                'stok_sebelum' => $log->stok_sebelum,
+                'stok_sesudah' => $log->stok_sesudah,
+                'referensi' => $log->referensi,
+                'keterangan' => $log->keterangan,
+                'harga_beli' => $log->harga_beli,
+                'created_at' => $log->created_at,
+                'updated_at' => $log->updated_at,
+                'bahan_baku' => null,
+                'menu' => $log->menu,
+                'user' => $log->user,
+                'source' => 'menu' // Marker untuk membedakan dari stok_log
+            ];
+        });
+        
+        // Merge semua logs
+        $allLogs = $stokLogs->concat($menuLogsTransformed)->sortByDesc('created_at');
+        
+        // Ringkasan total dari kedua sumber
+        $stokMasuk = $allLogs->where('tipe', 'masuk');
         $totalStokMasuk = $stokMasuk->sum('jumlah');
         $nilaiStokMasuk = $stokMasuk->sum(function($log) {
-            return $log->jumlah * ($log->bahanBaku->harga_per_satuan ?? 0);
+            return $log['harga_beli'] ?? 0;
         });
         
-        // Ringkasan stok keluar
-        $stokKeluar = $stokLogs->where('tipe', 'keluar');
+        $stokKeluar = $allLogs->where('tipe', 'keluar');
         $totalStokKeluar = $stokKeluar->sum('jumlah');
         $nilaiStokKeluar = $stokKeluar->sum(function($log) {
-            return $log->jumlah * ($log->bahanBaku->harga_per_satuan ?? 0);
+            return $log['harga_beli'] ?? 0;
         });
         
-        // Group by bahan baku
+        // Group by bahan baku dengan detail per batch/log
         $perBahanBaku = $stokLogs->groupBy('bahan_baku_id')->map(function($logs) {
             $bahanBaku = $logs->first()->bahanBaku;
             $masuk = $logs->where('tipe', 'masuk')->sum('jumlah');
             $keluar = $logs->where('tipe', 'keluar')->sum('jumlah');
+            
+            // Hitung nilai dengan harga_beli (total harga batch)
+            $nilaiMasuk = $logs->where('tipe', 'masuk')->sum(function($log) {
+                return $log->harga_beli ?? 0;
+            });
+            
+            $nilaiKeluar = $logs->where('tipe', 'keluar')->sum(function($log) {
+                return $log->harga_beli ?? 0;
+            });
             
             return [
                 'bahan_baku_id' => $bahanBaku->id,
@@ -431,8 +507,8 @@ class DashboardController extends Controller
                 'stok_masuk' => $masuk,
                 'stok_keluar' => $keluar,
                 'selisih' => $masuk - $keluar,
-                'nilai_masuk' => $masuk * ($bahanBaku->harga_per_satuan ?? 0),
-                'nilai_keluar' => $keluar * ($bahanBaku->harga_per_satuan ?? 0),
+                'nilai_masuk' => $nilaiMasuk,
+                'nilai_keluar' => $nilaiKeluar,
             ];
         })->values();
         
@@ -445,7 +521,7 @@ class DashboardController extends Controller
                     'selesai' => $tanggalSelesai
                 ],
                 'ringkasan' => [
-                    'total_transaksi' => $stokLogs->count(),
+                    'total_transaksi' => $allLogs->count(),
                     'stok_masuk' => [
                         'jumlah_transaksi' => $stokMasuk->count(),
                         'total_unit' => $totalStokMasuk,
@@ -458,7 +534,7 @@ class DashboardController extends Controller
                     ]
                 ],
                 'per_bahan_baku' => $perBahanBaku,
-                'logs' => $stokLogs
+                'logs' => $allLogs->values()
             ]
         ]);
     }

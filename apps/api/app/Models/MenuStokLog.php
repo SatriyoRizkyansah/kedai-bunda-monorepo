@@ -14,6 +14,7 @@ class MenuStokLog extends Model
         'user_id',
         'tipe',
         'jumlah',
+        'harga_beli',
         'stok_sebelum',
         'stok_sesudah',
         'referensi',
@@ -22,6 +23,7 @@ class MenuStokLog extends Model
 
     protected $casts = [
         'jumlah' => 'decimal:2',
+        'harga_beli' => 'decimal:2',
         'stok_sebelum' => 'decimal:2',
         'stok_sesudah' => 'decimal:2',
     ];

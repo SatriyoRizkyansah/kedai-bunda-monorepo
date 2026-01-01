@@ -45,14 +45,22 @@ Route::middleware(['auth:api'])->group(function () {
     Route::get('satuan/grouped', [SatuanController::class, 'groupedByTipe']);
     Route::get('satuan/{satuan}', [SatuanController::class, 'show']);
 
-    // Bahan Baku (admin dan super_admin)
+    // Bahan Baku - read access untuk semua role (untuk inventori view)
+    Route::get('bahan-baku', [BahanBakuController::class, 'index']);
+    Route::get('bahan-baku/{id}', [BahanBakuController::class, 'show']);
+    Route::get('bahan-baku/{id}/stok-log', [BahanBakuController::class, 'stokLog']);
+    Route::get('bahan-baku/{id}/batch-tracking', [BahanBakuController::class, 'batchTracking']);
+    
+    // Bahan Baku - write access hanya untuk admin dan super_admin
     Route::middleware('role:super_admin,admin')->group(function () {
-        Route::apiResource('bahan-baku', BahanBakuController::class);
+        Route::post('bahan-baku', [BahanBakuController::class, 'store']);
+        Route::put('bahan-baku/{id}', [BahanBakuController::class, 'update']);
+        Route::delete('bahan-baku/{id}', [BahanBakuController::class, 'destroy']);
         Route::post('bahan-baku/{id}/tambah-stok', [BahanBakuController::class, 'tambahStok']);
         Route::post('bahan-baku/{id}/kurangi-stok', [BahanBakuController::class, 'kurangiStok']);
-        Route::get('bahan-baku/{id}/stok-log', [BahanBakuController::class, 'stokLog']);
         
         // Konversi Bahan
+        Route::get('konversi-bahan/bahan-baku/{id}', [KonversiBahanController::class, 'getByBahanBaku']);
         Route::apiResource('konversi-bahan', KonversiBahanController::class);
         
         // Master Data Satuan (CRUD hanya admin)
@@ -61,11 +69,17 @@ Route::middleware(['auth:api'])->group(function () {
         Route::delete('satuan/{satuan}', [SatuanController::class, 'destroy']);
     });
 
-    // Menu (admin dan super_admin)
+    // Menu - read access untuk kasir (untuk transaksi)
+    Route::get('menu', [MenuController::class, 'index']);
+    Route::get('menu/{id}', [MenuController::class, 'show']);
+    Route::get('menu/{id}/cek-stok', [MenuController::class, 'cekStok']);
+    Route::get('menu/{id}/stok-efektif', [MenuController::class, 'getStokEfektif']);
+    
+    // Menu - write access hanya untuk admin dan super_admin
     Route::middleware('role:super_admin,admin')->group(function () {
-        Route::apiResource('menu', MenuController::class);
-        Route::get('menu/{id}/cek-stok', [MenuController::class, 'cekStok']);
-        Route::get('menu/{id}/stok-efektif', [MenuController::class, 'getStokEfektif']);
+        Route::post('menu', [MenuController::class, 'store']);
+        Route::put('menu/{id}', [MenuController::class, 'update']);
+        Route::delete('menu/{id}', [MenuController::class, 'destroy']);
         Route::post('menu/{id}/tambah-stok', [MenuController::class, 'tambahStok']);
         Route::post('menu/{id}/kurangi-stok', [MenuController::class, 'kurangiStok']);
         Route::get('menu/{id}/stok-log', [MenuController::class, 'stokLog']);
@@ -76,8 +90,16 @@ Route::middleware(['auth:api'])->group(function () {
         Route::delete('komposisi-menu/menu/{menuId}', [KomposisiMenuController::class, 'destroyByMenu']);
     });
 
-    // Transaksi (semua role bisa akses)
-    Route::apiResource('transaksi', TransaksiController::class)->except(['update', 'destroy']);
+    // Transaksi - read access untuk admin & kasir (untuk laporan & dashboard)
+    Route::get('transaksi', [TransaksiController::class, 'index']);
+    Route::get('transaksi/{id}', [TransaksiController::class, 'show']);
+    
+    // Transaksi - write access hanya untuk kasir dan super_admin
+    Route::middleware('role:super_admin,kasir')->group(function () {
+        Route::post('transaksi', [TransaksiController::class, 'store']);
+    });
+    
+    // Cancel transaksi - only admin dan super_admin
     Route::post('transaksi/{id}/batal', [TransaksiController::class, 'batal'])->middleware('role:super_admin,admin');
 
     // Stok Log / Riwayat Stok
@@ -87,7 +109,7 @@ Route::middleware(['auth:api'])->group(function () {
 
     // User Management (hanya super_admin)
     Route::middleware('role:super_admin')->group(function () {
-        Route::apiResource('users', UserController::class)->except(['store']); // store sudah ada di register
+        Route::apiResource('users', UserController::class);
     });
 
     // Profile (semua user yang login)
