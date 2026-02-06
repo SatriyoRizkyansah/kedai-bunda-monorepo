@@ -31,7 +31,7 @@ const NUMPAD_KEYS = [
 export function CartPanel({ cart, bayar, metodePembayaran, namaPelanggan, onUpdateQuantity, onRemoveFromCart, onClearCart, onBayarChange, onMetodeChange, onNamaChange, onSubmit, isLoading = false }: CartPanelProps) {
   const total = calculateTotal(cart);
   const kembalian = calculateKembalian(cart, bayar);
-  const isReadyToPay = cart.length > 0 && (bayar === "Uang Pas" || kembalian >= 0);
+  const isReadyToPay = cart.length > 0 && (metodePembayaran !== "tunai" || bayar === "Uang Pas" || kembalian >= 0);
 
   const handleNumpadKeyClick = (key: string) => {
     if (key === "Uang Pas") {
