@@ -4,19 +4,35 @@ import path from "path";
 
 // https://vite.dev/config/
 export default defineConfig({
-    plugins: [react()],
-    resolve: {
-        alias: {
-            "@": path.resolve(__dirname, "./src"),
-        },
+  plugins: [react()],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
     },
-    server: {
-        port: 5173,
-        proxy: {
-            "/api": {
-                target: "http://localhost:8000",
-                changeOrigin: true,
-            },
-        },
+  },
+  build: {
+    // Optimize untuk PWA
+    minify: "terser",
+    terserOptions: {
+      compress: {
+        drop_console: true,
+      },
     },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ["react", "react-dom", "react-router-dom"],
+        },
+      },
+    },
+  },
+  server: {
+    port: 5173,
+    proxy: {
+      "/api": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+    },
+  },
 });
