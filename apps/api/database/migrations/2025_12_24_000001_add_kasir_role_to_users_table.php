@@ -12,11 +12,12 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         // For MySQL, we need to modify the enum by dropping and recreating the constraint
-        // First, get all current data with new default
         Schema::table('users', function (Blueprint $table) {
-            // Change the enum to include 'kasir' role
-            // For MySQL, we use raw SQL to alter enum values
             DB::statement("ALTER TABLE users MODIFY role ENUM('super_admin', 'admin', 'kasir') DEFAULT 'admin'");
         });
     }
@@ -26,8 +27,11 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         Schema::table('users', function (Blueprint $table) {
-            // Revert back to original enum (this will fail if there are kasir users, which is expected)
             DB::statement("ALTER TABLE users MODIFY role ENUM('super_admin', 'admin') DEFAULT 'admin'");
         });
     }

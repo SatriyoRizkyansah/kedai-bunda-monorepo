@@ -171,49 +171,115 @@ class TransaksiController extends Controller
         DB::beginTransaction();
 
         try {
-            // Cek stok untuk semua menu
+            // Cache menu dan agregasi kebutuhan stok
+            $menuCache = [];
+            $menuTotals = [];
+            $bahanUsage = [];
             $total = 0;
             $detailItems = [];
-            
+
             foreach ($request->items as $item) {
-                $menu = Menu::with('komposisiMenu.bahanBaku.satuan', 'komposisiMenu.satuan')->find($item['menu_id']);
-                
-                if (!$menu) {
-                    throw new \Exception("Menu dengan ID {$item['menu_id']} tidak ditemukan");
+                $menuId = $item['menu_id'];
+                $jumlah = (int) $item['jumlah'];
+
+                if (!isset($menuCache[$menuId])) {
+                    $menuCache[$menuId] = Menu::with('komposisiMenu.bahanBaku.satuan', 'komposisiMenu.satuan')
+                        ->lockForUpdate()
+                        ->find($menuId);
                 }
+
+                $menu = $menuCache[$menuId];
+
+                if (!$menu) {
+                    throw new \Exception("Menu dengan ID {$menuId} tidak ditemukan");
+                }
+
+                $menuTotals[$menuId] = ($menuTotals[$menuId] ?? 0) + $jumlah;
+
+                foreach ($menu->komposisiMenu as $komposisi) {
+                    $bahanBaku = $komposisi->bahanBaku;
+
+                    if (!$bahanBaku || $komposisi->jumlah <= 0) {
+                        continue;
+                    }
+
+                    $pemakaian = (float) $komposisi->jumlah * $jumlah;
+
+                    if (!isset($bahanUsage[$bahanBaku->id])) {
+                        $bahanUsage[$bahanBaku->id] = [
+                            'model' => $bahanBaku,
+                            'jumlah' => 0,
+                            'satuan' => $komposisi->satuan?->nama
+                                ?? $bahanBaku->satuan?->nama
+                                ?? $bahanBaku->satuan_dasar
+                                ?? 'satuan',
+                        ];
+                    }
+
+                    $bahanUsage[$bahanBaku->id]['jumlah'] += $pemakaian;
+                }
+
+                $subtotal = $menu->harga_jual * $jumlah;
+                $total += $subtotal;
+
+                $detailItems[] = [
+                    'menu' => $menu,
+                    'jumlah' => $jumlah,
+                    'harga_satuan' => $menu->harga_jual,
+                    'subtotal' => $subtotal,
+                ];
+            }
+
+            // Validasi stok menu & bahan baku secara agregat
+            foreach ($menuTotals as $menuId => $jumlahTotalMenu) {
+                $menu = $menuCache[$menuId];
 
                 if (!$menu->tersedia) {
                     throw new \Exception("Menu {$menu->nama} tidak tersedia");
                 }
 
-                // Cek stok bahan untuk menu ini
-                foreach ($menu->komposisiMenu as $komposisi) {
-                    $bahanBaku = $komposisi->bahanBaku;
-                    if (!$bahanBaku || $komposisi->jumlah <= 0) {
-                        continue;
+                if ($menu->kelola_stok_mandiri) {
+                    $stokManual = (float) $menu->stok;
+
+                    if ($stokManual < $jumlahTotalMenu) {
+                        $satuanMenu = $menu->satuan?->nama ?? 'porsi';
+
+                        throw new \Exception(
+                            "Stok menu {$menu->nama} tidak mencukupi. " .
+                            "Dibutuhkan: {$jumlahTotalMenu} {$satuanMenu}, " .
+                            "Tersedia: {$stokManual} {$satuanMenu}"
+                        );
+                    }
+                } else {
+                    // Untuk menu yang bergantung pada bahan baku, pastikan komposisi tersedia
+                    if ($menu->komposisiMenu->isEmpty()) {
+                        throw new \Exception("Menu {$menu->nama} belum memiliki komposisi bahan baku");
                     }
 
-                    $jumlahDibutuhkan = $komposisi->jumlah * $item['jumlah'];
-                    $satuanNama = $komposisi->satuan?->nama ?? $bahanBaku->satuan?->nama ?? 'satuan';
+                    $stokEfektif = (float) $menu->hitungStokDariBahanBaku();
 
-                    if ($bahanBaku->stok_tersedia < $jumlahDibutuhkan) {
+                    if ($stokEfektif < $jumlahTotalMenu) {
+                        $satuanMenu = $menu->satuan?->nama ?? 'porsi';
+
                         throw new \Exception(
-                            "Stok {$bahanBaku->nama} tidak mencukupi. " .
-                            "Dibutuhkan: {$jumlahDibutuhkan} {$satuanNama}, " .
-                            "Tersedia: {$bahanBaku->stok_tersedia} {$satuanNama}"
+                            "Stok bahan baku untuk menu {$menu->nama} tidak mencukupi. " .
+                            "Dibutuhkan: {$jumlahTotalMenu} {$satuanMenu}, " .
+                            "Tersedia: {$stokEfektif} {$satuanMenu}"
                         );
                     }
                 }
+            }
 
-                $subtotal = $menu->harga_jual * $item['jumlah'];
-                $total += $subtotal;
+            foreach ($bahanUsage as $usage) {
+                $bahan = $usage['model'];
+                $jumlahDibutuhkan = $usage['jumlah'];
 
-                $detailItems[] = [
-                    'menu' => $menu,
-                    'jumlah' => $item['jumlah'],
-                    'harga_satuan' => $menu->harga_jual,
-                    'subtotal' => $subtotal
-                ];
+                if ($bahan->stok_tersedia < $jumlahDibutuhkan) {
+                    throw new \Exception(
+                        "Stok {$bahan->nama} tidak mencukupi. Dibutuhkan: " .
+                        "{$jumlahDibutuhkan} {$usage['satuan']}, Tersedia: {$bahan->stok_tersedia} {$usage['satuan']}"
+                    );
+                }
             }
 
             // Validasi pembayaran
@@ -246,33 +312,55 @@ class TransaksiController extends Controller
                     'subtotal' => $detail['subtotal']
                 ]);
 
-                // Kurangi stok bahan baku sesuai komposisi manual
-                foreach ($detail['menu']->komposisiMenu as $komposisi) {
-                    $bahanBaku = $komposisi->bahanBaku;
+                if ($detail['menu']->kelola_stok_mandiri) {
+                    $menuModel = $detail['menu'];
+                    $stokSebelum = (float) $menuModel->stok;
+                    $stokSesudah = $stokSebelum - $detail['jumlah'];
 
-                    if (!$bahanBaku || $komposisi->jumlah <= 0) {
-                        continue;
+                    if ($stokSesudah < 0) {
+                        throw new \Exception("Stok menu {$menuModel->nama} tidak mencukupi saat pemrosesan transaksi");
                     }
 
-                    $jumlahPemakaian = $komposisi->jumlah * $detail['jumlah'];
+                    $menuModel->update(['stok' => $stokSesudah]);
 
-                    if ($jumlahPemakaian <= 0) {
-                        continue;
+                    $menuModel->stokLog()->create([
+                        'user_id' => $request->user_id,
+                        'tipe' => 'keluar',
+                        'jumlah' => $detail['jumlah'],
+                        'stok_sebelum' => $stokSebelum,
+                        'stok_sesudah' => $stokSesudah,
+                        'referensi' => $transaksi->nomor_transaksi,
+                        'keterangan' => 'Penjualan menu via transaksi POS',
+                    ]);
+                } else {
+                    // Kurangi stok bahan baku sesuai komposisi
+                    foreach ($detail['menu']->komposisiMenu as $komposisi) {
+                        $bahanBaku = $komposisi->bahanBaku;
+
+                        if (!$bahanBaku || $komposisi->jumlah <= 0) {
+                            continue;
+                        }
+
+                        $jumlahPemakaian = $komposisi->jumlah * $detail['jumlah'];
+
+                        if ($jumlahPemakaian <= 0) {
+                            continue;
+                        }
+
+                        $satuanNama = $komposisi->satuan?->nama
+                            ?? $bahanBaku->satuan?->nama
+                            ?? $bahanBaku->satuan_dasar
+                            ?? 'satuan';
+
+                        $deskripsi = "Pemakaian {$jumlahPemakaian} {$satuanNama} {$bahanBaku->nama} untuk menu {$detail['menu']->nama}";
+
+                        $bahanBaku->kurangiStok(
+                            $jumlahPemakaian,
+                            $request->user_id,
+                            $deskripsi,
+                            $transaksi->nomor_transaksi
+                        );
                     }
-
-                    $satuanNama = $komposisi->satuan?->nama
-                        ?? $bahanBaku->satuan?->nama
-                        ?? $bahanBaku->satuan_dasar
-                        ?? 'satuan';
-
-                    $deskripsi = "Pemakaian {$jumlahPemakaian} {$satuanNama} {$bahanBaku->nama} untuk menu {$detail['menu']->nama}";
-
-                    $bahanBaku->kurangiStok(
-                        $jumlahPemakaian,
-                        $request->user_id,
-                        $deskripsi,
-                        $transaksi->nomor_transaksi
-                    );
                 }
             }
 

@@ -43,6 +43,8 @@ export interface Menu {
   kelola_stok_mandiri: boolean;
   satuan_id?: number | null;
   stok_efektif?: number;
+  stok_sisa?: number;
+  stok_label?: string;
   satuan?: Satuan;
   created_at: string;
   updated_at: string;

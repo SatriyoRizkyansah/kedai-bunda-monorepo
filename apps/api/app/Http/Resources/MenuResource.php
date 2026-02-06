@@ -23,10 +23,12 @@ class MenuResource extends JsonResource
             'deskripsi' => $this->deskripsi,
             'tersedia' => $this->tersedia,
             'stok' => (float) $this->stok,
+            'stok_sisa' => (float) $this->stok_efektif,
             'kelola_stok_mandiri' => $this->kelola_stok_mandiri,
             'satuan_id' => $this->satuan_id,
             'satuan' => $this->whenLoaded('satuan'),
             'stok_efektif' => $this->stok_efektif,
+            'stok_label' => $this->kelola_stok_mandiri ? 'Manual' : 'Bahan Baku',
             'komposisi' => $this->whenLoaded('komposisiMenu', function () {
                 return $this->komposisiMenu->map(function ($item) {
                     return [

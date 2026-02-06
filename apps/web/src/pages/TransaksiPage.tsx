@@ -14,7 +14,7 @@ import { RiwayatTab } from "@/pages/transaksi/RiwayatTab";
 import { MobileCartDialog } from "@/pages/transaksi/MobileCartDialog";
 import { TransaksiDetailDialog } from "@/pages/transaksi/TransaksiDetailDialog";
 import type { CartItem, MetodePembayaran } from "@/pages/transaksi/types";
-import { filterMenu, filterTransaksi, calculateTotal, getCartItemCount } from "@/pages/transaksi/utils";
+import { filterMenu, filterTransaksi, calculateTotal, getCartItemCount, getMenuStockValue, formatStockValue } from "@/pages/transaksi/utils";
 import { playTransactionSound } from "@/lib/sound";
 
 export function TransaksiPage() {
@@ -71,15 +71,42 @@ export function TransaksiPage() {
 
   // Cart management
   const addToCart = (menu: Menu) => {
+    const totalStock = Math.floor(getMenuStockValue(menu));
     const existingItem = cart.find((item) => item.menu_id === menu.id);
+    const currentQty = existingItem?.jumlah ?? 0;
+    const desiredQty = currentQty + 1;
+
+    if (totalStock <= 0) {
+      notify.warning(`Stok ${menu.nama} sudah habis`);
+      return;
+    }
+
+    if (desiredQty > totalStock) {
+      const remaining = Math.max(0, totalStock - currentQty);
+      notify.warning(`Stok ${menu.nama} hanya tersisa ${formatStockValue(remaining)} unit`);
+      return;
+    }
+
     if (existingItem) {
-      setCart(cart.map((item) => (item.menu_id === menu.id ? { ...item, jumlah: item.jumlah + 1 } : item)));
+      setCart(cart.map((item) => (item.menu_id === menu.id ? { ...item, jumlah: desiredQty } : item)));
     } else {
       setCart([...cart, { menu_id: menu.id, menu, jumlah: 1 }]);
     }
   };
 
   const updateQuantity = (menuId: number, delta: number) => {
+    const targetItem = cart.find((item) => item.menu_id === menuId);
+    if (!targetItem) return;
+
+    if (delta > 0) {
+      const totalStock = Math.floor(getMenuStockValue(targetItem.menu));
+      if (targetItem.jumlah >= totalStock) {
+        const remaining = Math.max(0, totalStock - targetItem.jumlah);
+        notify.warning(`Stok ${targetItem.menu.nama} tidak mencukupi (tersisa ${formatStockValue(remaining)})`);
+        return;
+      }
+    }
+
     setCart(
       cart
         .map((item) => {
@@ -89,7 +116,7 @@ export function TransaksiPage() {
           }
           return item;
         })
-        .filter((item) => item.jumlah > 0)
+        .filter((item) => item.jumlah > 0),
     );
   };
 
@@ -134,6 +161,7 @@ export function TransaksiPage() {
 
       clearCart();
       fetchTransaksi();
+      fetchMenu();
       notify.success("Transaksi berhasil!");
       // Play success sound
       await playTransactionSound();
@@ -153,6 +181,7 @@ export function TransaksiPage() {
     try {
       await api.post(`/transaksi/${id}/batal`);
       fetchTransaksi();
+      fetchMenu();
       notify.success("Transaksi dibatalkan");
     } catch (error: unknown) {
       const err = error as { response?: { data?: { pesan?: string } } };

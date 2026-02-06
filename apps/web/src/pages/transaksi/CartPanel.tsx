@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import type { CartItem, MetodePembayaran } from "./types";
-import { calculateTotal, calculateKembalian, formatCurrency, handleNumpadPress } from "./utils";
+import { calculateTotal, calculateKembalian, formatCurrency, handleNumpadPress, getMenuStockValue, formatStockValue } from "./utils";
 
 interface CartPanelProps {
   cart: CartItem[];
@@ -58,30 +58,7 @@ export function CartPanel({ cart, bayar, metodePembayaran, namaPelanggan, onUpda
               <p className="text-sm font-semibold">Keranjang ({cart.length} item)</p>
               <div className="space-y-2 max-h-40 overflow-y-auto">
                 {cart.map((item) => (
-                  <div key={item.menu_id} className="flex justify-between items-start gap-2 pb-2 border-b last:border-b-0">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm line-clamp-1">{item.menu.nama}</p>
-                      <p className="text-xs text-gray-500">
-                        {formatCurrency(item.menu.harga || item.menu.harga_jual || 0)} x {item.jumlah}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => onUpdateQuantity(item.menu_id, -1)}>
-                        <Minus className="w-3 h-3" />
-                      </Button>
-
-                      <span className="w-6 text-center text-sm font-medium">{item.jumlah}</span>
-
-                      <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => onUpdateQuantity(item.menu_id, 1)}>
-                        <Plus className="w-3 h-3" />
-                      </Button>
-
-                      <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-red-600" onClick={() => onRemoveFromCart(item.menu_id)}>
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </div>
+                  <CartItemRow key={item.menu_id} item={item} onUpdateQuantity={onUpdateQuantity} onRemoveFromCart={onRemoveFromCart} />
                 ))}
               </div>
 
@@ -147,7 +124,7 @@ export function CartPanel({ cart, bayar, metodePembayaran, namaPelanggan, onUpda
                   <Button key={key} variant={key === "C" || key === "DEL" ? "destructive" : "outline"} className="h-10 text-sm font-medium" onClick={() => handleNumpadKeyClick(key)} disabled={isLoading}>
                     {key}
                   </Button>
-                ))
+                )),
               )}
             </div>
           </div>
@@ -161,5 +138,45 @@ export function CartPanel({ cart, bayar, metodePembayaran, namaPelanggan, onUpda
         </Button>
       </div>
     </Card>
+  );
+}
+
+interface CartItemRowProps {
+  item: CartItem;
+  onUpdateQuantity: (menuId: number, delta: number) => void;
+  onRemoveFromCart: (menuId: number) => void;
+}
+
+function CartItemRow({ item, onUpdateQuantity, onRemoveFromCart }: CartItemRowProps) {
+  const totalStock = Math.floor(getMenuStockValue(item.menu));
+  const remainingStock = Math.max(0, Number((totalStock - item.jumlah).toFixed(2)));
+  const satuanLabel = item.menu.satuan?.nama || "porsi";
+
+  return (
+    <div className="flex justify-between items-start gap-2 pb-2 border-b last:border-b-0">
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-sm line-clamp-1">{item.menu.nama}</p>
+        <p className="text-xs text-gray-500">
+          {formatCurrency(item.menu.harga || item.menu.harga_jual || 0)} x {item.jumlah}
+        </p>
+        <p className={`text-xs ${remainingStock <= 0 ? "text-red-600 font-semibold" : "text-gray-500"}`}>{remainingStock <= 0 ? "Stok habis" : `Sisa stok: ${formatStockValue(remainingStock)} ${satuanLabel}`}</p>
+      </div>
+
+      <div className="flex items-center gap-1 flex-shrink-0">
+        <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => onUpdateQuantity(item.menu_id, -1)}>
+          <Minus className="w-3 h-3" />
+        </Button>
+
+        <span className="w-6 text-center text-sm font-medium">{item.jumlah}</span>
+
+        <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => onUpdateQuantity(item.menu_id, 1)} disabled={remainingStock <= 0}>
+          <Plus className="w-3 h-3" />
+        </Button>
+
+        <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-red-600" onClick={() => onRemoveFromCart(item.menu_id)}>
+          <Trash2 className="w-3 h-3" />
+        </Button>
+      </div>
+    </div>
   );
 }

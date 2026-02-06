@@ -156,13 +156,13 @@ class MenuController extends Controller
         
         // Convert string boolean ke boolean
         if (isset($data['tersedia'])) {
-            $data['tersedia'] = in_array($data['tersedia'], ['true', '1', true, 1]);
+            $data['tersedia'] = in_array($data['tersedia'], ['true', '1', true, 1], true);
         } else {
             $data['tersedia'] = true;
         }
         
         if (isset($data['kelola_stok_mandiri'])) {
-            $data['kelola_stok_mandiri'] = in_array($data['kelola_stok_mandiri'], ['true', '1', true, 1]);
+            $data['kelola_stok_mandiri'] = in_array($data['kelola_stok_mandiri'], ['true', '1', true, 1], true);
         } else {
             $data['kelola_stok_mandiri'] = true;
         }
@@ -347,11 +347,11 @@ class MenuController extends Controller
         
         // Convert string boolean ke boolean
         if (isset($data['tersedia'])) {
-            $data['tersedia'] = in_array($data['tersedia'], ['true', '1', true, 1]);
+            $data['tersedia'] = in_array($data['tersedia'], ['true', '1', true, 1], true);
         }
         
         if (isset($data['kelola_stok_mandiri'])) {
-            $data['kelola_stok_mandiri'] = in_array($data['kelola_stok_mandiri'], ['true', '1', true, 1]);
+            $data['kelola_stok_mandiri'] = in_array($data['kelola_stok_mandiri'], ['true', '1', true, 1], true);
         }
         
         // Handle file upload - hanya jika ada file baru (frontend hanya kirim jika File object)

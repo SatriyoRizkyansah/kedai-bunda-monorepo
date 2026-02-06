@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 import type { Menu } from "@/lib/types";
 import { MenuItemCard } from "./MenuItemCard";
+import { getMenuStockValue, getRemainingStock } from "./utils";
 
 interface MenuGridProps {
   filteredMenu: Menu[];
@@ -42,9 +43,13 @@ export function MenuGrid({ filteredMenu, searchTerm, selectedKategori, cart, kat
       <div className="flex-1 overflow-y-auto min-h-0">
         {filteredMenu.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pr-2">
-            {filteredMenu.map((menu) => (
-              <MenuItemCard key={menu.id} menu={menu} isInCart={cartMap.has(menu.id)} cartQuantity={cartMap.get(menu.id) || 0} onAddClick={() => onAddToCart(menu)} />
-            ))}
+            {filteredMenu.map((menu) => {
+              const cartQuantity = cartMap.get(menu.id) || 0;
+              const totalStock = getMenuStockValue(menu);
+              const remainingStock = getRemainingStock(menu, cartQuantity);
+
+              return <MenuItemCard key={menu.id} menu={menu} isInCart={cartMap.has(menu.id)} cartQuantity={cartQuantity} totalStock={totalStock} remainingStock={remainingStock} onAddClick={() => onAddToCart(menu)} />;
+            })}
           </div>
         ) : (
           <div className="flex items-center justify-center py-12 text-gray-500">Tidak ada menu tersedia</div>

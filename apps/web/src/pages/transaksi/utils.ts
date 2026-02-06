@@ -1,5 +1,10 @@
 import type { CartItem, Menu } from "./types";
 
+const STOCK_FORMATTER = new Intl.NumberFormat("id-ID", {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+});
+
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
 // Get image URL
@@ -65,6 +70,46 @@ export const handleNumpadPress = (key: string, currentBayar: string): string => 
 // Get cart item count
 export const getCartItemCount = (cart: CartItem[]): number => {
   return cart.reduce((sum, item) => sum + item.jumlah, 0);
+};
+
+// Stock helpers
+export const formatStockValue = (value: number): string => {
+  return STOCK_FORMATTER.format(value);
+};
+
+export const getMenuStockValue = (menu?: Menu | null): number => {
+  if (!menu) return 0;
+  const baseValue = menu.kelola_stok_mandiri ? (menu.stok_sisa ?? menu.stok) : (menu.stok_efektif ?? menu.stok_sisa ?? menu.stok);
+
+  const parsed = Number(baseValue ?? 0);
+  return Number.isNaN(parsed) ? 0 : Math.max(0, parsed);
+};
+
+export const getRemainingStock = (menu?: Menu | null, cartQty = 0): number => {
+  const total = getMenuStockValue(menu);
+  const remaining = total - cartQty;
+  if (remaining <= 0) return 0;
+  return Number(remaining.toFixed(2));
+};
+
+export const getStockLabel = (menu?: Menu | null, cartQty = 0): string => {
+  const total = getMenuStockValue(menu);
+  const remaining = getRemainingStock(menu, cartQty);
+  const satuan = menu?.satuan?.nama || "porsi";
+
+  if (total <= 0) {
+    return `Habis (${satuan})`;
+  }
+
+  if (remaining === total) {
+    return `${formatStockValue(total)} ${satuan} tersedia`;
+  }
+
+  return `Sisa ${formatStockValue(remaining)} / ${formatStockValue(total)} ${satuan}`;
+};
+
+export const isMenuOutOfStock = (menu?: Menu | null, cartQty = 0): boolean => {
+  return getRemainingStock(menu, cartQty) <= 0;
 };
 
 // Filter menu
