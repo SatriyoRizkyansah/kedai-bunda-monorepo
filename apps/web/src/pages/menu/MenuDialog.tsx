@@ -18,12 +18,12 @@ interface MenuDialogProps {
 export function MenuDialog({ open, editingItem, formData, onFormDataChange, onSubmit, onOpenChange, isLoading = false }: MenuDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90dvh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>{editingItem ? "Edit Menu" : "Tambah Menu"}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={onSubmit}>
-          <div className="grid gap-4 py-4">
+        <form onSubmit={onSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <div className="grid gap-4 py-4 overflow-y-auto pr-1">
             <div className="grid gap-2">
               <label htmlFor="nama" className="text-sm font-medium">
                 Nama Menu <span className="text-destructive">*</span>
@@ -172,7 +172,7 @@ export function MenuDialog({ open, editingItem, formData, onFormDataChange, onSu
               </label>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
               Batal
             </Button>

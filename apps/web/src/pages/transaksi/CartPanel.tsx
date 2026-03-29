@@ -43,9 +43,9 @@ export function CartPanel({ cart, bayar, metodePembayaran, namaPelanggan, onUpda
   };
 
   return (
-    <Card className="h-full overflow-hidden flex flex-col">
+    <Card className="h-full min-h-0 overflow-hidden flex flex-col">
       <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4">
-        {/* Customer Name */} 
+        {/* Customer Name */}
         <div>
           <label className="text-sm font-medium">Nama Pelanggan (Opsional)</label>
           <Input placeholder="Masukkan nama..." value={namaPelanggan} onChange={(e) => onNamaChange(e.target.value)} className="mt-1" />

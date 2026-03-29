@@ -1,4 +1,4 @@
-import { Eye, EyeOff, Fingerprint } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { LoginFormData } from "./types";
@@ -80,10 +80,10 @@ export function LoginForm({ formData, showPassword, error, loading, onEmailChang
       </Button>
 
       {/* Biometric Button */}
-      <Button type="button" variant="outline" className="w-full h-12 rounded-xl text-base font-medium border-gray-200 hover:bg-gray-50 transition-all gap-2" disabled>
+      {/* <Button type="button" variant="outline" className="w-full h-12 rounded-xl text-base font-medium border-gray-200 hover:bg-gray-50 transition-all gap-2" disabled>
         <Fingerprint className="h-5 w-5 text-primary" />
         {LOGIN_MESSAGES.BIOMETRIC_BUTTON}
-      </Button>
+      </Button> */}
     </form>
   );
 }
