@@ -38,31 +38,31 @@ export function KeuntunganTab({ loading, laporan, period }: KeuntunganTabProps) 
   return (
     <div className="space-y-6">
       {/* Export Button */}
-      <div className="flex justify-end">
-        <Button onClick={handleExport} className="bg-green-600 hover:bg-green-700">
+      <div className="flex flex-col sm:flex-row sm:justify-end">
+        <Button onClick={handleExport} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
           <FileSpreadsheet className="h-4 w-4 mr-2" />
           Export Excel
         </Button>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Total Pendapatan</p>
-            <p className="text-xl font-bold text-foreground">{formatCurrency(laporan.ringkasan.total_pendapatan)}</p>
+          <CardContent className="pt-5 sm:pt-6">
+            <p className="text-xs sm:text-sm text-muted-foreground">Total Pendapatan</p>
+            <p className="text-lg sm:text-xl font-bold text-foreground">{formatCurrency(laporan.ringkasan.total_pendapatan)}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Total HPP</p>
-            <p className="text-xl font-bold text-red-600">{formatCurrency(laporan.ringkasan.total_hpp)}</p>
+          <CardContent className="pt-5 sm:pt-6">
+            <p className="text-xs sm:text-sm text-muted-foreground">Total HPP</p>
+            <p className="text-lg sm:text-xl font-bold text-red-600">{formatCurrency(laporan.ringkasan.total_hpp)}</p>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-800">
-          <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Laba Kotor</p>
-            <p className="text-xl font-bold text-green-600">{formatCurrency(laporan.ringkasan.laba_kotor)}</p>
+          <CardContent className="pt-5 sm:pt-6">
+            <p className="text-xs sm:text-sm text-muted-foreground">Laba Kotor</p>
+            <p className="text-lg sm:text-xl font-bold text-green-600">{formatCurrency(laporan.ringkasan.laba_kotor)}</p>
             <div className="flex items-center gap-1 mt-1">
               <TrendingUp className="h-3 w-3 text-green-600" />
               <span className="text-xs text-green-600">{laporan.ringkasan.margin_kotor_persen.toFixed(1)}% margin</span>
@@ -70,9 +70,9 @@ export function KeuntunganTab({ loading, laporan, period }: KeuntunganTabProps) 
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Biaya Stok Masuk</p>
-            <p className="text-xl font-bold text-orange-600">{formatCurrency(laporan.ringkasan.biaya_pembelian_stok)}</p>
+          <CardContent className="pt-5 sm:pt-6">
+            <p className="text-xs sm:text-sm text-muted-foreground">Biaya Stok Masuk</p>
+            <p className="text-lg sm:text-xl font-bold text-orange-600">{formatCurrency(laporan.ringkasan.biaya_pembelian_stok)}</p>
           </CardContent>
         </Card>
       </div>
@@ -83,53 +83,55 @@ export function KeuntunganTab({ loading, laporan, period }: KeuntunganTabProps) 
           <CardTitle>Keuntungan per Menu</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Menu</TableHead>
-                <TableHead className="text-center">Terjual</TableHead>
-                <TableHead className="text-right">Pendapatan</TableHead>
-                <TableHead className="text-right">HPP</TableHead>
-                <TableHead className="text-right">Laba</TableHead>
-                <TableHead className="text-right">Margin</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {laporan.per_menu.length > 0 ? (
-                laporan.per_menu.map((m, idx) => {
-                  const margin = m.total_pendapatan > 0 ? ((m.total_laba / m.total_pendapatan) * 100).toFixed(1) : "0";
-                  return (
-                    <TableRow key={idx}>
-                      <TableCell>
-                        <p className="font-medium">{m.nama_menu}</p>
-                        <p className="text-xs text-muted-foreground capitalize">{m.kategori}</p>
-                      </TableCell>
-                      <TableCell className="text-center">{formatNumber(m.jumlah_terjual)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(m.total_pendapatan)}</TableCell>
-                      <TableCell className="text-right text-red-600">{formatCurrency(m.total_hpp)}</TableCell>
-                      <TableCell className="text-right text-green-600 font-medium">{formatCurrency(m.total_laba)}</TableCell>
-                      <TableCell className="text-right">
-                        <Badge
-                          variant={parseFloat(margin) >= 30 ? "default" : parseFloat(margin) >= 15 ? "secondary" : "destructive"}
-                          className={
-                            parseFloat(margin) >= 30 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : parseFloat(margin) >= 15 ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" : ""
-                          }
-                        >
-                          {margin}%
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              ) : (
+          <div className="w-full overflow-x-auto">
+            <Table className="min-w-[720px]">
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    Tidak ada data
-                  </TableCell>
+                  <TableHead>Menu</TableHead>
+                  <TableHead className="text-center">Terjual</TableHead>
+                  <TableHead className="text-right">Pendapatan</TableHead>
+                  <TableHead className="text-right">HPP</TableHead>
+                  <TableHead className="text-right">Laba</TableHead>
+                  <TableHead className="text-right">Margin</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {laporan.per_menu.length > 0 ? (
+                  laporan.per_menu.map((m, idx) => {
+                    const margin = m.total_pendapatan > 0 ? ((m.total_laba / m.total_pendapatan) * 100).toFixed(1) : "0";
+                    return (
+                      <TableRow key={idx}>
+                        <TableCell>
+                          <p className="font-medium">{m.nama_menu}</p>
+                          <p className="text-xs text-muted-foreground capitalize">{m.kategori}</p>
+                        </TableCell>
+                        <TableCell className="text-center">{formatNumber(m.jumlah_terjual)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(m.total_pendapatan)}</TableCell>
+                        <TableCell className="text-right text-red-600">{formatCurrency(m.total_hpp)}</TableCell>
+                        <TableCell className="text-right text-green-600 font-medium">{formatCurrency(m.total_laba)}</TableCell>
+                        <TableCell className="text-right">
+                          <Badge
+                            variant={parseFloat(margin) >= 30 ? "default" : parseFloat(margin) >= 15 ? "secondary" : "destructive"}
+                            className={
+                              parseFloat(margin) >= 30 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : parseFloat(margin) >= 15 ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" : ""
+                            }
+                          >
+                            {margin}%
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      Tidak ada data
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 

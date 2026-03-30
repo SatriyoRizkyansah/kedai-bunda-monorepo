@@ -38,18 +38,18 @@ export function StokLogTab({ loading, laporan, period }: StokLogTabProps) {
   return (
     <div className="space-y-6">
       {/* Export Button */}
-      <div className="flex justify-end">
-        <Button onClick={handleExport} className="bg-green-600 hover:bg-green-700">
+      <div className="flex flex-col sm:flex-row sm:justify-end">
+        <Button onClick={handleExport} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
           <FileSpreadsheet className="h-4 w-4 mr-2" />
           Export Excel
         </Button>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
         {/* Stok Masuk */}
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-5 sm:pt-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
                 <ArrowDownCircle className="h-6 w-6 text-green-600" />
@@ -74,7 +74,7 @@ export function StokLogTab({ loading, laporan, period }: StokLogTabProps) {
 
         {/* Stok Keluar */}
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-5 sm:pt-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
                 <ArrowUpCircle className="h-6 w-6 text-red-600" />
@@ -104,49 +104,51 @@ export function StokLogTab({ loading, laporan, period }: StokLogTabProps) {
           <CardTitle>Ringkasan per Bahan Baku</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Bahan Baku</TableHead>
-                <TableHead className="text-center text-green-600">Masuk</TableHead>
-                <TableHead className="text-center text-red-600">Keluar</TableHead>
-                <TableHead className="text-center">Selisih</TableHead>
-                <TableHead className="text-right">Nilai</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {laporan.per_bahan_baku.length > 0 ? (
-                laporan.per_bahan_baku.map((b, idx) => (
-                  <TableRow key={idx}>
-                    <TableCell>
-                      <p className="font-medium">{b.nama}</p>
-                      <p className="text-xs text-muted-foreground">{b.satuan_dasar}</p>
-                    </TableCell>
-                    <TableCell className="text-center text-green-600">+{formatNumber(b.stok_masuk)}</TableCell>
-                    <TableCell className="text-center text-red-600">-{formatNumber(b.stok_keluar)}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant={b.selisih >= 0 ? "default" : "destructive"}>
-                        {b.selisih >= 0 ? "+" : ""}
-                        {formatNumber(b.selisih)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="text-xs">
-                        <div className="text-green-600">Masuk: {formatCurrency(b.nilai_masuk)}</div>
-                        <div className="text-red-600">Keluar: {formatCurrency(b.nilai_keluar)}</div>
-                      </div>
+          <div className="w-full overflow-x-auto">
+            <Table className="min-w-[640px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Bahan Baku</TableHead>
+                  <TableHead className="text-center text-green-600">Masuk</TableHead>
+                  <TableHead className="text-center text-red-600">Keluar</TableHead>
+                  <TableHead className="text-center">Selisih</TableHead>
+                  <TableHead className="text-right">Nilai</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {laporan.per_bahan_baku.length > 0 ? (
+                  laporan.per_bahan_baku.map((b, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell>
+                        <p className="font-medium">{b.nama}</p>
+                        <p className="text-xs text-muted-foreground">{b.satuan_dasar}</p>
+                      </TableCell>
+                      <TableCell className="text-center text-green-600">+{formatNumber(b.stok_masuk)}</TableCell>
+                      <TableCell className="text-center text-red-600">-{formatNumber(b.stok_keluar)}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={b.selisih >= 0 ? "default" : "destructive"}>
+                          {b.selisih >= 0 ? "+" : ""}
+                          {formatNumber(b.selisih)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="text-xs">
+                          <div className="text-green-600">Masuk: {formatCurrency(b.nilai_masuk)}</div>
+                          <div className="text-red-600">Keluar: {formatCurrency(b.nilai_keluar)}</div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      Tidak ada data
                     </TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    Tidak ada data
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 

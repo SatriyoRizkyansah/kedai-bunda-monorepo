@@ -39,37 +39,37 @@ export function PenjualanTab({ loading, laporan, period }: PenjualanTabProps) {
   return (
     <div className="space-y-6">
       {/* Export Button */}
-      <div className="flex justify-end">
-        <Button onClick={handleExport} className="bg-green-600 hover:bg-green-700">
+      <div className="flex flex-col sm:flex-row sm:justify-end">
+        <Button onClick={handleExport} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
           <FileSpreadsheet className="h-4 w-4 mr-2" />
           Export Excel
         </Button>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Total Transaksi</p>
-            <p className="text-2xl font-bold text-foreground">{formatNumber(laporan.ringkasan.total_transaksi)}</p>
+          <CardContent className="pt-5 sm:pt-6">
+            <p className="text-xs sm:text-sm text-muted-foreground">Total Transaksi</p>
+            <p className="text-lg sm:text-2xl font-bold text-foreground">{formatNumber(laporan.ringkasan.total_transaksi)}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Total Pendapatan</p>
-            <p className="text-2xl font-bold text-green-600">{formatCurrency(laporan.ringkasan.total_pendapatan)}</p>
+          <CardContent className="pt-5 sm:pt-6">
+            <p className="text-xs sm:text-sm text-muted-foreground">Total Pendapatan</p>
+            <p className="text-lg sm:text-2xl font-bold text-green-600">{formatCurrency(laporan.ringkasan.total_pendapatan)}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Total Bayar</p>
-            <p className="text-2xl font-bold text-foreground">{formatCurrency(laporan.ringkasan.total_bayar)}</p>
+          <CardContent className="pt-5 sm:pt-6">
+            <p className="text-xs sm:text-sm text-muted-foreground">Total Bayar</p>
+            <p className="text-lg sm:text-2xl font-bold text-foreground">{formatCurrency(laporan.ringkasan.total_bayar)}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Rata-rata/Transaksi</p>
-            <p className="text-2xl font-bold text-foreground">{formatCurrency(laporan.ringkasan.rata_rata_per_transaksi)}</p>
+          <CardContent className="pt-5 sm:pt-6">
+            <p className="text-xs sm:text-sm text-muted-foreground">Rata-rata/Transaksi</p>
+            <p className="text-lg sm:text-2xl font-bold text-foreground">{formatCurrency(laporan.ringkasan.rata_rata_per_transaksi)}</p>
           </CardContent>
         </Card>
       </div>
@@ -90,14 +90,14 @@ export function PenjualanTab({ loading, laporan, period }: PenjualanTabProps) {
                 return (
                   <div key={idx} className="border rounded-lg overflow-hidden">
                     {/* Header Kategori - Collapsible */}
-                    <button onClick={() => setExpandedKategori(isOpen ? null : idx)} className="w-full flex items-center justify-between p-4 bg-muted/50 hover:bg-muted/70 transition-colors text-left">
+                    <button onClick={() => setExpandedKategori(isOpen ? null : idx)} className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 sm:p-4 bg-muted/50 hover:bg-muted/70 transition-colors text-left">
                       <div className="flex-1">
                         <p className="font-medium capitalize text-base">{kat.kategori}</p>
                         <p className="text-sm text-muted-foreground">
                           {formatNumber(kat.jumlah_transaksi)} transaksi • {formatNumber(kat.total_item)} item
                         </p>
                       </div>
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 w-full sm:w-auto">
                         <p className="font-semibold text-green-600">{formatCurrency(kat.total_pendapatan)}</p>
                         <ChevronRight className={`h-5 w-5 text-muted-foreground transition-transform ${isOpen ? "rotate-90" : ""}`} />
                       </div>
@@ -105,7 +105,7 @@ export function PenjualanTab({ loading, laporan, period }: PenjualanTabProps) {
 
                     {/* Detail Menu - Collapsible Content */}
                     {isOpen && (
-                      <div className="p-4 bg-white dark:bg-slate-950 border-t space-y-2">
+                      <div className="p-3 sm:p-4 bg-white dark:bg-slate-950 border-t space-y-2">
                         {menuKategori.length > 0 ? (
                           <div className="space-y-2">
                             <p className="text-xs font-medium text-muted-foreground uppercase mb-3">Menu dalam kategori ini:</p>

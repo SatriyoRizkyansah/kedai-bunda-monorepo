@@ -59,8 +59,8 @@ export function LaporanPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Laporan</h1>
-            <p className="text-muted-foreground text-sm">Lihat ringkasan penjualan, stok, dan keuntungan</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Laporan</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">Lihat ringkasan penjualan, stok, dan keuntungan</p>
           </div>
         </div>
 
@@ -69,18 +69,18 @@ export function LaporanPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
-            <TabsTrigger value="penjualan" className="flex items-center gap-2">
+          <TabsList className="grid w-full grid-cols-3 gap-2 mb-6 h-auto p-1">
+            <TabsTrigger value="penjualan" className="flex flex-col gap-1 py-2 text-[11px] leading-tight sm:flex-row sm:gap-2 sm:text-sm sm:py-1.5">
               <DollarSign className="h-4 w-4" />
-              <span className="hidden sm:inline">Penjualan</span>
+              <span className="text-[11px] sm:text-sm">Penjualan</span>
             </TabsTrigger>
-            <TabsTrigger value="stok-log" className="flex items-center gap-2">
+            <TabsTrigger value="stok-log" className="flex flex-col gap-1 py-2 text-[11px] leading-tight sm:flex-row sm:gap-2 sm:text-sm sm:py-1.5">
               <Package className="h-4 w-4" />
-              <span className="hidden sm:inline">Stok Log</span>
+              <span className="text-[11px] sm:text-sm">Stok Log</span>
             </TabsTrigger>
-            <TabsTrigger value="keuntungan" className="flex items-center gap-2">
+            <TabsTrigger value="keuntungan" className="flex flex-col gap-1 py-2 text-[11px] leading-tight sm:flex-row sm:gap-2 sm:text-sm sm:py-1.5">
               <BarChart3 className="h-4 w-4" />
-              <span className="hidden sm:inline">Keuntungan</span>
+              <span className="text-[11px] sm:text-sm">Keuntungan</span>
             </TabsTrigger>
           </TabsList>
 

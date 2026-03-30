@@ -15,24 +15,31 @@ interface PeriodFilterCardProps {
 export function PeriodFilterCard({ periodPreset, customPeriod, onPeriodPresetChange, onCustomPeriodChange }: PeriodFilterCardProps) {
   return (
     <Card>
-      <CardContent className="pt-6">
-        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+      <CardContent className="p-4 sm:p-6">
+        <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Periode:</span>
+            <span className="text-sm font-medium">Periode</span>
           </div>
-          <div className="flex flex-wrap gap-2">
+
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
             {PERIOD_OPTIONS.map((option) => (
-              <Button key={option.value} variant={periodPreset === option.value ? "default" : "outline"} size="sm" onClick={() => onPeriodPresetChange(option.value)}>
+              <Button
+                key={option.value}
+                variant={periodPreset === option.value ? "default" : "outline"}
+                size="sm"
+                onClick={() => onPeriodPresetChange(option.value)}
+                className={`w-full justify-center sm:w-auto ${option.value === "custom" ? "col-span-2" : ""}`}
+              >
                 {option.label}
               </Button>
             ))}
           </div>
+
           {periodPreset === "custom" && (
-            <div className="flex gap-2 items-center">
-              <Input type="date" value={customPeriod.mulai} onChange={(e) => onCustomPeriodChange({ ...customPeriod, mulai: e.target.value })} className="w-auto" />
-              <span className="text-muted-foreground">-</span>
-              <Input type="date" value={customPeriod.selesai} onChange={(e) => onCustomPeriodChange({ ...customPeriod, selesai: e.target.value })} className="w-auto" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <Input type="date" value={customPeriod.mulai} onChange={(e) => onCustomPeriodChange({ ...customPeriod, mulai: e.target.value })} />
+              <Input type="date" value={customPeriod.selesai} onChange={(e) => onCustomPeriodChange({ ...customPeriod, selesai: e.target.value })} />
             </div>
           )}
         </div>
