@@ -104,7 +104,34 @@ export function StokLogTab({ loading, laporan, period }: StokLogTabProps) {
           <CardTitle>Ringkasan per Bahan Baku</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="w-full overflow-x-auto">
+          <div className="space-y-3 p-4 sm:hidden">
+            {laporan.per_bahan_baku.length > 0 ? (
+              laporan.per_bahan_baku.map((b, idx) => (
+                <div key={idx} className="rounded-lg border border-border p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-sm text-foreground">{b.nama}</p>
+                      <p className="text-xs text-muted-foreground">{b.satuan_dasar}</p>
+                    </div>
+                    <Badge variant={b.selisih >= 0 ? "default" : "destructive"}>
+                      {b.selisih >= 0 ? "+" : ""}
+                      {formatNumber(b.selisih)}
+                    </Badge>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <div className="text-green-600">Masuk: {formatNumber(b.stok_masuk)}</div>
+                    <div className="text-red-600">Keluar: {formatNumber(b.stok_keluar)}</div>
+                    <div className="text-green-600">Nilai Masuk: {formatCurrency(b.nilai_masuk)}</div>
+                    <div className="text-red-600">Nilai Keluar: {formatCurrency(b.nilai_keluar)}</div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-muted-foreground py-6">Tidak ada data</p>
+            )}
+          </div>
+
+          <div className="hidden w-full overflow-x-auto sm:block">
             <Table className="min-w-[640px]">
               <TableHeader>
                 <TableRow>

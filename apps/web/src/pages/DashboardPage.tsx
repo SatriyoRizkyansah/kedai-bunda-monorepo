@@ -173,13 +173,13 @@ export function DashboardPage() {
           <DashboardWelcomeCard userName={user?.name} />
           <DashboardStatsGrid stats={stats} trend={trend} userRole={user?.role} />
 
-          <div className="grid grid-cols-2 gap-3 sm:gap-6">
+          <div className="grid grid-cols-1 gap-3 sm:gap-6">
             <RevenueTrendCard data={stats.grafikPendapatan} />
             <CategorySalesCard data={stats.penjualanPerKategori} />
           </div>
 
           {showInventoryCards && (
-            <div className="grid grid-cols-2 gap-3 sm:gap-6">
+            <div className="grid grid-cols-1 gap-3 sm:gap-6">
               <TopMenuCard data={stats.menuTerlaris} />
               <LowStockAlertCard data={stats.bahanStokMenipis} />
             </div>

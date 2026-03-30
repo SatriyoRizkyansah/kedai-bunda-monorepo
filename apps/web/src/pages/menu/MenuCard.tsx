@@ -23,7 +23,7 @@ export function MenuCard({ item, onAddStok, onViewHistory, onEdit, onDelete }: M
       }}
     >
       {/* Gambar */}
-      <div className="relative w-full h-28 sm:h-40 bg-muted overflow-hidden">
+      <div className="relative w-full h-24 sm:h-40 bg-muted overflow-hidden">
         {item.gambar ? (
           <img src={getImageUrl(item.gambar) || ""} alt={item.nama} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
         ) : (
@@ -37,14 +37,13 @@ export function MenuCard({ item, onAddStok, onViewHistory, onEdit, onDelete }: M
       </div>
 
       <CardHeader className="pb-2 sm:pb-3 flex-1">
-        <div className="flex justify-between items-start gap-3">
-          <div className="flex-1">
-            <CardTitle className="text-base sm:text-xl text-foreground group-hover:text-primary transition-colors line-clamp-1">{item.nama}</CardTitle>
-            <p className="text-xs sm:text-sm text-muted-foreground capitalize mt-1 line-clamp-1">{item.kategori}</p>
-          </div>
-          <div className="flex flex-col gap-1 items-end">
+        <div className="space-y-1">
+          <CardTitle className="text-sm sm:text-xl text-foreground group-hover:text-primary transition-colors line-clamp-2">{item.nama}</CardTitle>
+          <p className="text-[11px] sm:text-sm text-muted-foreground capitalize line-clamp-1">{item.kategori}</p>
+          <div className="flex flex-wrap gap-1">
             <Badge
               variant={item.tersedia ? "success" : "destructive"}
+              className="text-[10px] sm:text-xs"
               style={{
                 borderRadius: "calc(var(--radius) - 2px)",
               }}
@@ -53,7 +52,7 @@ export function MenuCard({ item, onAddStok, onViewHistory, onEdit, onDelete }: M
             </Badge>
             <Badge
               variant="outline"
-              className="text-xs gap-1"
+              className="text-[10px] sm:text-xs gap-1"
               style={{
                 borderRadius: "calc(var(--radius) - 2px)",
               }}
@@ -74,17 +73,17 @@ export function MenuCard({ item, onAddStok, onViewHistory, onEdit, onDelete }: M
         </div>
       </CardHeader>
       <CardContent className="flex flex-col flex-1">
-        {item.deskripsi && <p className="text-xs sm:text-sm text-muted-foreground mb-3 line-clamp-2">{item.deskripsi}</p>}
+        {item.deskripsi && <p className="text-[11px] sm:text-sm text-muted-foreground mb-2 line-clamp-1 sm:line-clamp-2">{item.deskripsi}</p>}
 
         {/* Info Stok */}
-        <div className="flex items-center justify-between py-2 px-3 bg-muted/50 rounded-md mb-4">
-          <span className="text-xs sm:text-sm text-muted-foreground">Stok:</span>
-          <span className="text-sm sm:text-base font-semibold text-foreground">{Number(item.stok_efektif ?? item.stok ?? 0).toFixed(0)} porsi</span>
+        <div className="flex items-center justify-between py-1.5 px-2 bg-muted/50 rounded-md mb-3">
+          <span className="text-[11px] sm:text-sm text-muted-foreground">Stok:</span>
+          <span className="text-xs sm:text-base font-semibold text-foreground">{Number(item.stok_efektif ?? item.stok ?? 0).toFixed(0)} porsi</span>
         </div>
 
-        <div className="flex justify-between items-center pt-3 border-t border-border mt-auto">
-          <p className="text-lg sm:text-2xl font-bold text-primary">{formatCurrency(Number(item.harga_jual || item.harga || 0))}</p>
-          <div className="flex gap-1">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 pt-2 border-t border-border mt-auto">
+          <p className="text-base sm:text-2xl font-bold text-primary">{formatCurrency(Number(item.harga_jual || item.harga || 0))}</p>
+          <div className="flex gap-1 justify-end">
             {item.kelola_stok_mandiri && (
               <Button onClick={() => onAddStok(item)} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-green-500/10 hover:text-green-600" title="Tambah Stok">
                 <PackagePlus className="h-4 w-4" />

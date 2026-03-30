@@ -154,8 +154,8 @@ export function KonversiBahanTab() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex justify-end">
-        <Button onClick={() => handleOpenDialog()} className="gap-2">
+      <div className="flex flex-col sm:flex-row sm:justify-end">
+        <Button onClick={() => handleOpenDialog()} className="gap-2 w-full sm:w-auto">
           <Plus className="h-4 w-4" />
           Tambah Konversi
         </Button>
@@ -226,7 +226,7 @@ export function KonversiBahanTab() {
                   {Number(item.jumlah_konversi) % 1 !== 0 && <p className="text-xs text-muted-foreground text-center mb-3">(Persis: {Number(item.jumlah_konversi).toFixed(2)})</p>}
 
                   {/* Actions */}
-                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                     <Button onClick={() => handleOpenDialog(item)} variant="outline" size="sm" className="flex-1 text-xs h-8">
                       <Pencil className="h-3 w-3 mr-1" />
                       Edit

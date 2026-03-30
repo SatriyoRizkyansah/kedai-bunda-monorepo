@@ -83,7 +83,41 @@ export function KeuntunganTab({ loading, laporan, period }: KeuntunganTabProps) 
           <CardTitle>Keuntungan per Menu</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="w-full overflow-x-auto">
+          <div className="space-y-3 p-4 sm:hidden">
+            {laporan.per_menu.length > 0 ? (
+              laporan.per_menu.map((m, idx) => {
+                const margin = m.total_pendapatan > 0 ? ((m.total_laba / m.total_pendapatan) * 100).toFixed(1) : "0";
+                return (
+                  <div key={idx} className="rounded-lg border border-border p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-sm text-foreground">{m.nama_menu}</p>
+                        <p className="text-xs text-muted-foreground capitalize">{m.kategori}</p>
+                      </div>
+                      <Badge
+                        variant={parseFloat(margin) >= 30 ? "default" : parseFloat(margin) >= 15 ? "secondary" : "destructive"}
+                        className={
+                          parseFloat(margin) >= 30 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : parseFloat(margin) >= 15 ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" : ""
+                        }
+                      >
+                        {margin}%
+                      </Badge>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                      <div>Terjual: {formatNumber(m.jumlah_terjual)}</div>
+                      <div className="text-green-600">Laba: {formatCurrency(m.total_laba)}</div>
+                      <div>Pendapatan: {formatCurrency(m.total_pendapatan)}</div>
+                      <div className="text-red-600">HPP: {formatCurrency(m.total_hpp)}</div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="text-center text-muted-foreground py-6">Tidak ada data</p>
+            )}
+          </div>
+
+          <div className="hidden w-full overflow-x-auto sm:block">
             <Table className="min-w-[720px]">
               <TableHeader>
                 <TableRow>

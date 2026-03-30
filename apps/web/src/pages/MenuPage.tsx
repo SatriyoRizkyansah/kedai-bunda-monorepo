@@ -251,7 +251,7 @@ export function MenuPage() {
             <p className="text-muted-foreground">{searchTerm ? "Tidak ada hasil pencarian" : "Belum ada menu tersedia"}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-6">
             {filteredMenu.map((item) => (
               <MenuCard key={item.id} item={item} onAddStok={handleOpenStokDialog} onViewHistory={handleOpenHistori} onEdit={handleOpenDialog} onDelete={handleDelete} />
             ))}

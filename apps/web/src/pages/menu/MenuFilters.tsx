@@ -40,7 +40,7 @@ export function MenuFilters({ searchTerm, selectedKategori, kategoris, onSearchC
                 variant={selectedKategori === kat ? "default" : "outline"}
                 size="sm"
                 onClick={() => onKategoriChange(kat)}
-                className="capitalize shrink-0"
+                className="capitalize shrink-0 text-xs sm:text-sm"
                 style={{
                   borderRadius: "calc(var(--radius) - 2px)",
                 }}

@@ -309,7 +309,91 @@ export function KomposisiMenuTab() {
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="w-full overflow-x-auto">
+                <div className="space-y-2 sm:hidden">
+                  {group.komposisi.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between gap-3 rounded-md border border-border p-2">
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm text-foreground">{getBahanNama(item)}</p>
+                        <Badge variant="secondary" className="mt-1 text-xs font-mono">
+                          {Number(item.jumlah)} {getSatuanNama(item)}
+                        </Badge>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button variant="outline" size="sm" onClick={() => handleOpenDialog(item)} className="h-8 w-8 p-0">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleDelete(item.id!)} className="h-8 w-8 p-0 text-destructive hover:text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {addingToMenuId === group.menu.id ? (
+                    <div className="rounded-lg border border-border bg-blue-50/50 dark:bg-blue-900/10 p-3 space-y-3">
+                      {errorMessage && (
+                        <div className="bg-destructive/10 border border-destructive/30 text-destructive p-2 rounded-md flex gap-2 text-sm">
+                          <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                          <div>{errorMessage}</div>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-1 gap-3">
+                        <div>
+                          <label className="text-xs font-medium mb-1 block">Bahan Baku</label>
+                          <select value={inlineFormData.bahan_baku_id} onChange={(e) => handleInlineBahanChange(e.target.value)} className="w-full px-2 py-1.5 text-sm rounded-md border border-input bg-background" required>
+                            <option value="">Pilih bahan...</option>
+                            {bahanBakuList
+                              .filter((b) => !group.komposisi.some((k) => k.bahan_baku_id === b.id))
+                              .map((bahan) => (
+                                <option key={bahan.id} value={bahan.id}>
+                                  {bahan.nama}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-medium mb-1 block">Jumlah</label>
+                          <Input type="number" step="0.01" min="0.01" value={inlineFormData.jumlah} onChange={(e) => setInlineFormData({ ...inlineFormData, jumlah: e.target.value })} placeholder="0.00" className="h-8 text-sm" required />
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-medium mb-1 block">Satuan</label>
+                          <select
+                            value={inlineFormData.satuan_id}
+                            onChange={(e) => setInlineFormData({ ...inlineFormData, satuan_id: e.target.value })}
+                            className="w-full px-2 py-1.5 text-sm rounded-md border border-input bg-background"
+                            disabled={!inlineFormData.bahan_baku_id}
+                          >
+                            <option value="">Satuan default</option>
+                            {satuanList.map((satuan) => (
+                              <option key={satuan.id} value={satuan.id}>
+                                {satuan.nama}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2 justify-end">
+                        <Button type="button" variant="outline" size="sm" onClick={handleCancelInlineAdd}>
+                          Batal
+                        </Button>
+                        <Button type="button" size="sm" onClick={() => handleInlineSubmit(group.menu.id)} disabled={!inlineFormData.bahan_baku_id || !inlineFormData.jumlah} className="bg-green-600 hover:bg-green-700">
+                          <Plus className="h-3 w-3 mr-1" />
+                          Simpan
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button variant="outline" size="sm" onClick={() => handleStartAddingToMenu(group.menu.id)} className="gap-2 w-full">
+                      <Plus className="h-3 w-3" />
+                      Tambah Bahan
+                    </Button>
+                  )}
+                </div>
+
+                <div className="hidden w-full overflow-x-auto sm:block">
                   <Table className="min-w-[520px]">
                     <TableHeader>
                       <TableRow>
