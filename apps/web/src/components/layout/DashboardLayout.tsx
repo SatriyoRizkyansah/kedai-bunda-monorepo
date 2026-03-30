@@ -248,23 +248,21 @@ export function DashboardLayout({ children }: NavbarProps) {
   const isActive = useCallback((path: string) => location.pathname === path, [location.pathname]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background" style={{ minHeight: "100vh" }}>
+    <div className="h-[100svh] overflow-hidden flex flex-col bg-background">
       {/* Horizontal Navbar di Atas - Memoized */}
       <Navbar user={user} isActive={isActive} handleLogout={handleLogout} menuItems={menuItems} />
 
       {/* Main Content */}
-      <main className="flex-1 bg-background page-transition">
-        <div className="container mx-auto px-4 py-6" style={{ minHeight: "calc(100vh - 160px)" }}>
+      <main className="flex-1 min-h-0 bg-background page-transition overflow-hidden">
+        <div className="container no-transform mx-auto px-3 py-4 sm:px-4 sm:py-6 h-full min-h-0 overflow-y-auto">
           {children}
+          <footer className="mt-6 border-t border-border bg-card">
+            <div className="container mx-auto px-4 py-4" style={{ maxWidth: "100%", width: "100%" }}>
+              <p className="text-center text-sm text-muted-foreground">© 2025 Kedai Bunda. Semua hak dilindungi.</p>
+            </div>
+          </footer>
         </div>
       </main>
-
-      {/* Footer */}
-      <footer className="border-t border-border bg-card" style={{ minHeight: "64px" }}>
-        <div className="container mx-auto px-4 py-4" style={{ maxWidth: "100%", width: "100%" }}>
-          <p className="text-center text-sm text-muted-foreground">© 2025 Kedai Bunda. Semua hak dilindungi.</p>
-        </div>
-      </footer>
     </div>
   );
 }

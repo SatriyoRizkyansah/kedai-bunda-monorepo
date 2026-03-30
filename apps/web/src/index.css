@@ -73,6 +73,11 @@
     backface-visibility: hidden;
   }
 
+  .no-transform {
+    transform: none !important;
+    backface-visibility: visible !important;
+  }
+
   /* Stabilize main content area */
   main {
     contain: layout style;

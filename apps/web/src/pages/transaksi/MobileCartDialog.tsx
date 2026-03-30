@@ -37,7 +37,7 @@ export function MobileCartDialog({
 }: MobileCartDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[400px] h-[100dvh] sm:h-auto max-h-[100dvh] sm:max-h-[90dvh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-[400px] h-[100svh] sm:h-[100svh] lg:h-auto max-h-[100svh] sm:max-h-[100svh] lg:max-h-[90svh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Keranjang Belanja ({cart.length} item)</DialogTitle>
         </DialogHeader>

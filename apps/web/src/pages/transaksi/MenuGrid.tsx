@@ -20,7 +20,7 @@ export function MenuGrid({ filteredMenu, searchTerm, selectedKategori, cart, kat
   const cartMap = new Map(cart.map((item) => [item.menu_id, item.jumlah]));
 
   return (
-    <div className="h-full flex flex-col space-y-4 overflow-hidden">
+    <div className="h-full min-h-0 flex flex-col space-y-4 overflow-hidden">
       {/* Search Bar */}
       <div className="relative flex-shrink-0">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -40,7 +40,7 @@ export function MenuGrid({ filteredMenu, searchTerm, selectedKategori, cart, kat
       </div>
 
       {/* Menu Grid */}
-      <div className="flex-1 overflow-y-auto min-h-0 pb-24 lg:pb-0">
+      <div className="flex-1 overflow-y-auto min-h-0 pb-24 md:pb-0">
         {filteredMenu.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pr-2">
             {filteredMenu.map((menu) => {

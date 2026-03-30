@@ -56,7 +56,7 @@ export function CartPanel({ cart, bayar, metodePembayaran, namaPelanggan, onUpda
           {cart.length > 0 ? (
             <>
               <p className="text-sm font-semibold">Keranjang ({cart.length} item)</p>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
+              <div className="space-y-2">
                 {cart.map((item) => (
                   <CartItemRow key={item.menu_id} item={item} onUpdateQuantity={onUpdateQuantity} onRemoveFromCart={onRemoveFromCart} />
                 ))}

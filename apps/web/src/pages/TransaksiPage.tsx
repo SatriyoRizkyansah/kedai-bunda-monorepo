@@ -212,26 +212,26 @@ export function TransaksiPage() {
 
   return (
     <DashboardLayout>
-      <div className="h-[calc(100vh-180px)] flex flex-col overflow-hidden">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col overflow-hidden">
+      <div className="flex flex-col min-h-0">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
           {/* Header */}
-          <div className="flex items-center justify-between mb-4 flex-shrink-0">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 flex-shrink-0">
             <h2 className="text-xl md:text-2xl font-bold text-foreground">Transaksi</h2>
-            <TabsList className="grid grid-cols-2 w-[180px] md:w-[220px]">
-              <TabsTrigger value="pos" className="gap-1.5 text-xs md:text-sm">
+            <TabsList className="grid grid-cols-2 w-full sm:w-[220px]">
+              <TabsTrigger value="pos" className="gap-1.5 text-xs sm:text-sm">
                 <ShoppingCart className="h-4 w-4" />
-                <span className="hidden sm:inline">Kasir</span>
+                <span>Kasir</span>
               </TabsTrigger>
-              <TabsTrigger value="riwayat" className="gap-1.5 text-xs md:text-sm">
+              <TabsTrigger value="riwayat" className="gap-1.5 text-xs sm:text-sm">
                 <History className="h-4 w-4" />
-                <span className="hidden sm:inline">Riwayat</span>
+                <span>Riwayat</span>
               </TabsTrigger>
             </TabsList>
           </div>
 
           {/* POS Tab */}
-          <TabsContent value="pos" className="flex-1 mt-0 overflow-hidden data-[state=inactive]:hidden">
-            <div className="h-full overflow-hidden">
+          <TabsContent value="pos" className="flex-1 mt-0 min-h-0 flex flex-col data-[state=inactive]:hidden">
+            <div className="min-h-0 flex-1">
               <POSTab
                 filteredMenu={filteredMenu}
                 cart={cart}
@@ -257,7 +257,7 @@ export function TransaksiPage() {
           </TabsContent>
 
           {/* Riwayat Tab */}
-          <TabsContent value="riwayat" className="flex-1 mt-0 flex flex-col overflow-hidden data-[state=inactive]:hidden">
+          <TabsContent value="riwayat" className="flex-1 mt-0 flex flex-col min-h-0 data-[state=inactive]:hidden">
             {/* Stats Cards */}
             <div className="grid grid-cols-3 gap-3 mb-4 flex-shrink-0">
               <Card className="hover:shadow-md transition-shadow">
@@ -317,7 +317,7 @@ export function TransaksiPage() {
 
         {/* Mobile Cart FAB */}
         {cart.length > 0 && (
-          <div className="lg:hidden fixed bottom-4 left-4 right-4 z-50">
+          <div className="md:hidden fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-4 right-4 z-50">
             <Button onClick={() => setShowMobileCart(true)} className="w-full h-14 text-base shadow-xl gap-3">
               <ShoppingCart className="h-5 w-5" />
               <span>Lihat Keranjang</span>
