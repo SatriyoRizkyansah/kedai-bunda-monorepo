@@ -222,14 +222,14 @@ export function MenuPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h2 className="text-3xl font-bold text-foreground tracking-tight">Menu</h2>
-            <p className="text-muted-foreground mt-2">Kelola menu makanan dan minuman</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">Menu</h2>
+            <p className="text-sm sm:text-base text-muted-foreground mt-2">Kelola menu makanan dan minuman</p>
           </div>
           <Button
             onClick={() => handleOpenDialog()}
-            className="gap-2"
+            className="gap-2 w-full sm:w-auto"
             style={{
               boxShadow: "var(--shadow-md)",
             }}
@@ -251,7 +251,7 @@ export function MenuPage() {
             <p className="text-muted-foreground">{searchTerm ? "Tidak ada hasil pencarian" : "Belum ada menu tersedia"}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
             {filteredMenu.map((item) => (
               <MenuCard key={item.id} item={item} onAddStok={handleOpenStokDialog} onViewHistory={handleOpenHistori} onEdit={handleOpenDialog} onDelete={handleDelete} />
             ))}

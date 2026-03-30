@@ -169,12 +169,12 @@ export function UsersPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h2 className="text-3xl font-bold text-foreground tracking-tight">Pengguna</h2>
-            <p className="text-muted-foreground mt-2">Kelola akun pengguna sistem</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">Pengguna</h2>
+            <p className="text-sm sm:text-base text-muted-foreground mt-2">Kelola akun pengguna sistem</p>
           </div>
-          <Button onClick={() => handleOpenDialog()} className="gap-2">
+          <Button onClick={() => handleOpenDialog()} className="gap-2 w-full sm:w-auto">
             <Plus className="h-4 w-4" />
             Tambah Pengguna
           </Button>
@@ -206,54 +206,56 @@ export function UsersPage() {
           <LoadingScreen message="Memuat data pengguna..." size="md" />
         ) : (
           <div className="bg-white dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nama</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
-                  <TableHead>Dibuat</TableHead>
-                  <TableHead className="text-right">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.length > 0 ? (
-                  users.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">{user.name}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
-                      <TableCell>
-                        <Badge className={getRoleBadgeColor(user.role)}>{user.role === "super_admin" ? "Super Admin" : user.role === "admin" ? "Admin" : "Kasir"}</Badge>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant={user.aktif ? "default" : "secondary"}>{user.aktif ? "Aktif" : "Nonaktif"}</Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{new Date(user.created_at).toLocaleDateString("id-ID")}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex gap-2 justify-end">
-                          <Button variant="outline" size="sm" onClick={() => handleOpenDialog(user)} className="gap-1">
-                            <Edit2 className="h-3.5 w-3.5" />
-                            Edit
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleDeleteClick(user)} className="gap-1 text-destructive hover:text-destructive">
-                            <Trash2 className="h-3.5 w-3.5" />
-                            Hapus
-                          </Button>
-                        </div>
+            <div className="w-full overflow-x-auto">
+              <Table className="min-w-[720px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nama</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
+                    <TableHead>Dibuat</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.length > 0 ? (
+                    users.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell className="font-medium">{user.name}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
+                        <TableCell>
+                          <Badge className={getRoleBadgeColor(user.role)}>{user.role === "super_admin" ? "Super Admin" : user.role === "admin" ? "Admin" : "Kasir"}</Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant={user.aktif ? "default" : "secondary"}>{user.aktif ? "Aktif" : "Nonaktif"}</Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{new Date(user.created_at).toLocaleDateString("id-ID")}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex gap-2 justify-end">
+                            <Button variant="outline" size="sm" onClick={() => handleOpenDialog(user)} className="gap-1">
+                              <Edit2 className="h-3.5 w-3.5" />
+                              Edit
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleDeleteClick(user)} className="gap-1 text-destructive hover:text-destructive">
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Hapus
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        <UsersIcon className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50" />
+                        Belum ada pengguna
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      <UsersIcon className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50" />
-                      Belum ada pengguna
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         )}
 

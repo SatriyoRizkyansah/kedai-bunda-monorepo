@@ -10,30 +10,51 @@ export function InventoriPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h2 className="text-3xl font-bold text-foreground tracking-tight">Inventori</h2>
-          <p className="text-muted-foreground mt-2">Kelola bahan baku, tracking batch FIFO, komposisi menu, dan konversi satuan</p>
+        <div className="flex flex-col gap-2">
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">Inventori</h2>
+          <p className="text-sm sm:text-base text-muted-foreground">Kelola bahan baku, tracking batch FIFO, komposisi menu, dan konversi satuan</p>
         </div>
 
         <Tabs defaultValue="bahan-baku" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4 max-w-2xl">
-            <TabsTrigger value="bahan-baku" className="gap-2">
+          <TabsList className="grid w-full grid-cols-2 gap-2 p-1 h-auto sm:hidden">
+            <TabsTrigger value="bahan-baku" className="flex-col gap-1 py-2.5 whitespace-normal text-center leading-tight">
               <Package className="h-4 w-4" />
-              <span className="hidden sm:inline">Bahan Baku</span>
+              <span className="text-xs">Bahan Baku</span>
             </TabsTrigger>
-            <TabsTrigger value="tracking" className="gap-2">
+            <TabsTrigger value="tracking" className="flex-col gap-1 py-2.5 whitespace-normal text-center leading-tight">
               <TrendingDown className="h-4 w-4" />
-              <span className="hidden sm:inline">Tracking</span>
+              <span className="text-xs">Tracking</span>
             </TabsTrigger>
-            <TabsTrigger value="komposisi" className="gap-2">
+            <TabsTrigger value="komposisi" className="flex-col gap-1 py-2.5 whitespace-normal text-center leading-tight">
               <Layers className="h-4 w-4" />
-              <span className="hidden sm:inline">Komposisi</span>
+              <span className="text-xs">Komposisi</span>
             </TabsTrigger>
-            <TabsTrigger value="konversi" className="gap-2">
+            <TabsTrigger value="konversi" className="flex-col gap-1 py-2.5 whitespace-normal text-center leading-tight">
               <ArrowRightLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Konversi</span>
+              <span className="text-xs">Konversi</span>
             </TabsTrigger>
           </TabsList>
+
+          <div className="hidden w-full overflow-x-auto sm:block">
+            <TabsList className="inline-flex min-w-max gap-2 p-1">
+              <TabsTrigger value="bahan-baku" className="gap-2 min-w-[130px] justify-center">
+                <Package className="h-4 w-4" />
+                <span className="text-sm">Bahan Baku</span>
+              </TabsTrigger>
+              <TabsTrigger value="tracking" className="gap-2 min-w-[130px] justify-center">
+                <TrendingDown className="h-4 w-4" />
+                <span className="text-sm">Tracking</span>
+              </TabsTrigger>
+              <TabsTrigger value="komposisi" className="gap-2 min-w-[130px] justify-center">
+                <Layers className="h-4 w-4" />
+                <span className="text-sm">Komposisi</span>
+              </TabsTrigger>
+              <TabsTrigger value="konversi" className="gap-2 min-w-[130px] justify-center">
+                <ArrowRightLeft className="h-4 w-4" />
+                <span className="text-sm">Konversi</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="bahan-baku">
             <BahanBakuTab />

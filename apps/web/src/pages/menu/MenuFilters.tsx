@@ -19,8 +19,8 @@ export function MenuFilters({ searchTerm, selectedKategori, kategoris, onSearchC
         borderRadius: "var(--radius)",
       }}
     >
-      <CardContent className="p-6">
-        <div className="flex flex-col md:flex-row gap-4">
+      <CardContent className="p-4 sm:p-6">
+        <div className="flex flex-col md:flex-row gap-3 sm:gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -33,14 +33,14 @@ export function MenuFilters({ searchTerm, selectedKategori, kategoris, onSearchC
               }}
             />
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0 md:flex-wrap">
             {kategoris.map((kat) => (
               <Button
                 key={kat}
                 variant={selectedKategori === kat ? "default" : "outline"}
                 size="sm"
                 onClick={() => onKategoriChange(kat)}
-                className="capitalize"
+                className="capitalize shrink-0"
                 style={{
                   borderRadius: "calc(var(--radius) - 2px)",
                 }}

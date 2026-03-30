@@ -1,6 +1,6 @@
 import type { BahanBaku } from "@/lib/types";
 
-export const PIE_COLORS = ["#22c55e", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4", "#84cc16"] as const;
+export const PIE_COLORS = ["#16a34a", "#0ea5e9", "#f97316", "#f59e0b", "#ef4444", "#14b8a6", "#84cc16", "#eab308"] as const;
 
 export const formatCurrency = (value: number) => {
   if (value >= 1000000) {

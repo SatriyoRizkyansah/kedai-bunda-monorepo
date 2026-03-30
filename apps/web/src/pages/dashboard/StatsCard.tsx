@@ -11,15 +11,15 @@ interface StatsCardProps {
 
 export function StatsCard({ title, value, icon, subtitle, trend }: StatsCardProps) {
   return (
-    <Card className="group relative overflow-hidden border border-border bg-card hover:shadow-xl transition-all duration-500">
+    <Card className="group relative overflow-hidden border border-border/70 bg-gradient-to-br from-primary/5 via-card to-card hover:shadow-xl transition-all duration-500">
       <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-primary/10 blur-2xl transition-all duration-500 group-hover:scale-150" />
-      <div className="absolute -right-3 -bottom-3 h-16 w-16 rounded-full bg-primary/5 blur-xl opacity-60" />
+      <div className="absolute -right-3 -bottom-3 h-16 w-16 rounded-full bg-primary/5 blur-xl opacity-70" />
 
-      <CardContent className="relative p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 space-y-3">
-            <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase">{title}</p>
-            <p className="text-3xl font-bold text-foreground tracking-tight">{value}</p>
+      <CardContent className="relative p-4 sm:p-6">
+        <div className="flex items-start justify-between gap-3 sm:gap-4">
+          <div className="flex-1 space-y-2.5 sm:space-y-3">
+            <p className="text-xs sm:text-sm font-semibold text-muted-foreground tracking-wide uppercase">{title}</p>
+            <p className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight break-words">{value}</p>
             {trend && (
               <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${trend.isUp ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"}`}>
                 {trend.isUp ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
@@ -33,7 +33,7 @@ export function StatsCard({ title, value, icon, subtitle, trend }: StatsCardProp
               </div>
             )}
           </div>
-          <div className="bg-primary text-primary-foreground p-4 rounded-2xl shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:shadow-xl group-hover:rotate-3">{icon}</div>
+          <div className="bg-primary text-primary-foreground p-3 sm:p-4 rounded-2xl shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:shadow-xl group-hover:rotate-3">{icon}</div>
         </div>
       </CardContent>
 

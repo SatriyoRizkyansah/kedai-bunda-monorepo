@@ -13,7 +13,7 @@ export function DashboardStatsGrid({ stats, trend, userRole }: DashboardStatsGri
   const showInventoryStats = userRole === "admin" || userRole === "super_admin";
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
       {showInventoryStats && (
         <>
           <StatsCard title="Total Menu" value={stats.totalMenu.toString()} icon={<UtensilsCrossed className="h-5 w-5" />} />

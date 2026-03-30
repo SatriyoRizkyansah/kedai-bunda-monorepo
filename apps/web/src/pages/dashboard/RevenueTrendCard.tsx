@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { TrendingUp } from "lucide-react";
+import { useEffect, useState } from "react";
 import type { GrafikPendapatanItem } from "./types";
 import { formatCurrency, formatCurrencyFull } from "./utils";
 
@@ -9,18 +10,29 @@ interface RevenueTrendCardProps {
 }
 
 export function RevenueTrendCard({ data }: RevenueTrendCardProps) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const media = window.matchMedia("(max-width: 640px)");
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
   return (
     <Card className="border-border bg-card" style={{ boxShadow: "var(--shadow-md)", borderRadius: "var(--radius)" }}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+        <CardTitle className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-primary" />
           Pendapatan 7 Hari Terakhir
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[280px]">
+        <div className="h-[180px] sm:h-[240px] lg:h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+            <AreaChart data={data} margin={{ top: 10, right: 10, left: isMobile ? -10 : 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorPendapatan" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
@@ -28,8 +40,8 @@ export function RevenueTrendCard({ data }: RevenueTrendCardProps) {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="hari" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={{ stroke: "hsl(var(--border))" }} />
-              <YAxis tickFormatter={(value) => formatCurrency(value)} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={{ stroke: "hsl(var(--border))" }} width={70} />
+              <XAxis dataKey="hari" tick={{ fontSize: isMobile ? 10 : 12, fill: "hsl(var(--muted-foreground))" }} axisLine={{ stroke: "hsl(var(--border))" }} />
+              <YAxis tickFormatter={(value) => formatCurrency(value)} tick={{ fontSize: isMobile ? 10 : 11, fill: "hsl(var(--muted-foreground))" }} axisLine={{ stroke: "hsl(var(--border))" }} width={isMobile ? 56 : 70} />
               <Tooltip
                 formatter={(value) => {
                   const numValue = typeof value === "number" ? value : 0;

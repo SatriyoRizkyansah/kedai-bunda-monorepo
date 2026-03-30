@@ -312,73 +312,75 @@ export function BahanBakuTab() {
               <p className="text-muted-foreground">{searchTerm ? "Tidak ada hasil pencarian" : "Belum ada data bahan baku"}</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nama Bahan</TableHead>
-                  <TableHead className="text-center">Stok</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
-                  <TableHead className="text-center">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredBahanBaku.map((item) => {
-                  const lowStock = isLowStock(item);
-                  return (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.nama}</TableCell>
-                      <TableCell className="text-center">
-                        <div className={`font-semibold ${lowStock ? "text-destructive" : "text-foreground"}`}>
-                          {Math.floor(Number(item.stok_tersedia || 0))} {item.satuan?.nama || item.satuan_dasar}
-                        </div>
-                        {item.base_satuan_id && item.base_satuan && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            (dari {batchEstimates[item.id]?.estimated_base_remaining || "?"} {item.base_satuan.nama})
-                          </p>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {lowStock ? (
-                          <Badge variant="destructive" className="gap-1">
-                            <AlertCircle className="h-3 w-3" />
-                            Menipis
-                          </Badge>
-                        ) : (
-                          <Badge className="bg-green-500 text-white hover:bg-green-600">Aman</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex justify-center gap-1">
-                          {isAdmin && (
-                            <>
-                              <Button onClick={() => handleOpenStokDialog(item, "tambah")} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-green-500/10 hover:text-green-600" title="Tambah Stok">
-                                <PackagePlus className="h-4 w-4" />
-                              </Button>
-                              <Button onClick={() => handleOpenStokDialog(item, "kurang")} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-orange-500/10 hover:text-orange-600" title="Kurangi Stok">
-                                <PackageMinus className="h-4 w-4" />
-                              </Button>
-                            </>
+            <div className="w-full overflow-x-auto">
+              <Table className="min-w-[640px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nama Bahan</TableHead>
+                    <TableHead className="text-center">Stok</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
+                    <TableHead className="text-center">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredBahanBaku.map((item) => {
+                    const lowStock = isLowStock(item);
+                    return (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.nama}</TableCell>
+                        <TableCell className="text-center">
+                          <div className={`font-semibold ${lowStock ? "text-destructive" : "text-foreground"}`}>
+                            {Math.floor(Number(item.stok_tersedia || 0))} {item.satuan?.nama || item.satuan_dasar}
+                          </div>
+                          {item.base_satuan_id && item.base_satuan && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              (dari {batchEstimates[item.id]?.estimated_base_remaining || "?"} {item.base_satuan.nama})
+                            </p>
                           )}
-                          <Button onClick={() => handleOpenHistori(item)} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-blue-500/10 hover:text-blue-600" title="Riwayat Stok">
-                            <History className="h-4 w-4" />
-                          </Button>
-                          {isAdmin && (
-                            <>
-                              <Button onClick={() => handleOpenDialog(item)} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary" title="Edit">
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10" title="Hapus" onClick={() => handleDelete(item.id)}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {lowStock ? (
+                            <Badge variant="destructive" className="gap-1">
+                              <AlertCircle className="h-3 w-3" />
+                              Menipis
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-green-500 text-white hover:bg-green-600">Aman</Badge>
                           )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex justify-center gap-1">
+                            {isAdmin && (
+                              <>
+                                <Button onClick={() => handleOpenStokDialog(item, "tambah")} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-green-500/10 hover:text-green-600" title="Tambah Stok">
+                                  <PackagePlus className="h-4 w-4" />
+                                </Button>
+                                <Button onClick={() => handleOpenStokDialog(item, "kurang")} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-orange-500/10 hover:text-orange-600" title="Kurangi Stok">
+                                  <PackageMinus className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                            <Button onClick={() => handleOpenHistori(item)} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-blue-500/10 hover:text-blue-600" title="Riwayat Stok">
+                              <History className="h-4 w-4" />
+                            </Button>
+                            {isAdmin && (
+                              <>
+                                <Button onClick={() => handleOpenDialog(item)} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary" title="Edit">
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10" title="Hapus" onClick={() => handleDelete(item.id)}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

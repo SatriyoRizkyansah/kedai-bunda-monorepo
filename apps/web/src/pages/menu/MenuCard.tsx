@@ -23,24 +23,24 @@ export function MenuCard({ item, onAddStok, onViewHistory, onEdit, onDelete }: M
       }}
     >
       {/* Gambar */}
-      <div className="relative w-full h-40 bg-muted overflow-hidden">
+      <div className="relative w-full h-28 sm:h-40 bg-muted overflow-hidden">
         {item.gambar ? (
           <img src={getImageUrl(item.gambar) || ""} alt={item.nama} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/10">
             <div className="flex flex-col items-center gap-2 text-muted-foreground">
-              <ImageIcon className="h-8 w-8" />
-              <span className="text-xs">Tidak ada gambar</span>
+              <ImageIcon className="h-6 w-6 sm:h-8 sm:w-8" />
+              <span className="text-[11px] sm:text-xs">Tidak ada gambar</span>
             </div>
           </div>
         )}
       </div>
 
-      <CardHeader className="pb-3 flex-1">
+      <CardHeader className="pb-2 sm:pb-3 flex-1">
         <div className="flex justify-between items-start gap-3">
           <div className="flex-1">
-            <CardTitle className="text-xl text-foreground group-hover:text-primary transition-colors">{item.nama}</CardTitle>
-            <p className="text-sm text-muted-foreground capitalize mt-1">{item.kategori}</p>
+            <CardTitle className="text-base sm:text-xl text-foreground group-hover:text-primary transition-colors line-clamp-1">{item.nama}</CardTitle>
+            <p className="text-xs sm:text-sm text-muted-foreground capitalize mt-1 line-clamp-1">{item.kategori}</p>
           </div>
           <div className="flex flex-col gap-1 items-end">
             <Badge
@@ -74,16 +74,16 @@ export function MenuCard({ item, onAddStok, onViewHistory, onEdit, onDelete }: M
         </div>
       </CardHeader>
       <CardContent className="flex flex-col flex-1">
-        {item.deskripsi && <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{item.deskripsi}</p>}
+        {item.deskripsi && <p className="text-xs sm:text-sm text-muted-foreground mb-3 line-clamp-2">{item.deskripsi}</p>}
 
         {/* Info Stok */}
         <div className="flex items-center justify-between py-2 px-3 bg-muted/50 rounded-md mb-4">
-          <span className="text-sm text-muted-foreground">Stok:</span>
-          <span className="font-semibold text-foreground">{Number(item.stok_efektif ?? item.stok ?? 0).toFixed(0)} porsi</span>
+          <span className="text-xs sm:text-sm text-muted-foreground">Stok:</span>
+          <span className="text-sm sm:text-base font-semibold text-foreground">{Number(item.stok_efektif ?? item.stok ?? 0).toFixed(0)} porsi</span>
         </div>
 
         <div className="flex justify-between items-center pt-3 border-t border-border mt-auto">
-          <p className="text-2xl font-bold text-primary">{formatCurrency(Number(item.harga_jual || item.harga || 0))}</p>
+          <p className="text-lg sm:text-2xl font-bold text-primary">{formatCurrency(Number(item.harga_jual || item.harga || 0))}</p>
           <div className="flex gap-1">
             {item.kelola_stok_mandiri && (
               <Button onClick={() => onAddStok(item)} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-green-500/10 hover:text-green-600" title="Tambah Stok">

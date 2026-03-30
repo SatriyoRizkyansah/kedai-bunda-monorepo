@@ -292,9 +292,9 @@ export function KomposisiMenuTab() {
           {filteredKomposisi.map((group) => (
             <Card key={group.menu.id}>
               <CardHeader className="pb-3">
-                <div className="flex justify-between items-start">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                   <div>
-                    <CardTitle className="text-base flex items-center gap-2">
+                    <CardTitle className="text-base flex items-center gap-2 flex-wrap">
                       {group.menu.nama}
                       <Badge variant="outline">{group.menu.kategori}</Badge>
                     </CardTitle>
@@ -302,124 +302,126 @@ export function KomposisiMenuTab() {
                       {group.komposisi.length === 0 ? <span className="text-muted-foreground italic">Belum ada bahan baku</span> : <span>{group.komposisi.length} bahan baku diperlukan</span>}
                     </CardDescription>
                   </div>
-                  <div className="text-right">
+                  <div className="text-left sm:text-right">
                     <p className="text-xs text-muted-foreground">Harga</p>
                     <p className="font-semibold text-primary">Rp {Number(group.menu.harga || group.menu.harga_jual).toLocaleString("id-ID")}</p>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Bahan Baku</TableHead>
-                      <TableHead>Kebutuhan</TableHead>
-                      <TableHead className="text-right">Aksi</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {group.komposisi.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">{getBahanNama(item)}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className="font-mono">
-                            {Number(item.jumlah)} {getSatuanNama(item)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(item)} className="h-8 w-8 p-0">
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id!)} className="h-8 w-8 p-0 text-destructive hover:text-destructive">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
+                <div className="w-full overflow-x-auto">
+                  <Table className="min-w-[520px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Bahan Baku</TableHead>
+                        <TableHead>Kebutuhan</TableHead>
+                        <TableHead className="text-right">Aksi</TableHead>
                       </TableRow>
-                    ))}
+                    </TableHeader>
+                    <TableBody>
+                      {group.komposisi.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-medium">{getBahanNama(item)}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="font-mono">
+                              {Number(item.jumlah)} {getSatuanNama(item)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(item)} className="h-8 w-8 p-0">
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id!)} className="h-8 w-8 p-0 text-destructive hover:text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
 
-                    {addingToMenuId === group.menu.id ? (
-                      <TableRow className="bg-blue-50/50 dark:bg-blue-900/10">
-                        <TableCell colSpan={3} className="py-4">
-                          <div className="space-y-3">
-                            {errorMessage && (
-                              <div className="bg-destructive/10 border border-destructive/30 text-destructive p-2 rounded-md flex gap-2 text-sm">
-                                <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                                <div>{errorMessage}</div>
-                              </div>
-                            )}
-                            <div className="grid grid-cols-3 gap-3">
-                              <div>
-                                <label className="text-xs font-medium mb-1 block">Bahan Baku</label>
-                                <select value={inlineFormData.bahan_baku_id} onChange={(e) => handleInlineBahanChange(e.target.value)} className="w-full px-2 py-1.5 text-sm rounded-md border border-input bg-background" required>
-                                  <option value="">Pilih bahan...</option>
-                                  {bahanBakuList
-                                    .filter((b) => !group.komposisi.some((k) => k.bahan_baku_id === b.id))
-                                    .map((bahan) => (
-                                      <option key={bahan.id} value={bahan.id}>
-                                        {bahan.nama}
+                      {addingToMenuId === group.menu.id ? (
+                        <TableRow className="bg-blue-50/50 dark:bg-blue-900/10">
+                          <TableCell colSpan={3} className="py-4">
+                            <div className="space-y-3">
+                              {errorMessage && (
+                                <div className="bg-destructive/10 border border-destructive/30 text-destructive p-2 rounded-md flex gap-2 text-sm">
+                                  <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                                  <div>{errorMessage}</div>
+                                </div>
+                              )}
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div>
+                                  <label className="text-xs font-medium mb-1 block">Bahan Baku</label>
+                                  <select value={inlineFormData.bahan_baku_id} onChange={(e) => handleInlineBahanChange(e.target.value)} className="w-full px-2 py-1.5 text-sm rounded-md border border-input bg-background" required>
+                                    <option value="">Pilih bahan...</option>
+                                    {bahanBakuList
+                                      .filter((b) => !group.komposisi.some((k) => k.bahan_baku_id === b.id))
+                                      .map((bahan) => (
+                                        <option key={bahan.id} value={bahan.id}>
+                                          {bahan.nama}
+                                        </option>
+                                      ))}
+                                  </select>
+                                </div>
+
+                                <div>
+                                  <label className="text-xs font-medium mb-1 block">Jumlah</label>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0.01"
+                                    value={inlineFormData.jumlah}
+                                    onChange={(e) => setInlineFormData({ ...inlineFormData, jumlah: e.target.value })}
+                                    placeholder="0.00"
+                                    className="h-8 text-sm"
+                                    required
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="text-xs font-medium mb-1 block">Satuan</label>
+                                  <select
+                                    value={inlineFormData.satuan_id}
+                                    onChange={(e) => setInlineFormData({ ...inlineFormData, satuan_id: e.target.value })}
+                                    className="w-full px-2 py-1.5 text-sm rounded-md border border-input bg-background"
+                                    disabled={!inlineFormData.bahan_baku_id}
+                                  >
+                                    <option value="">Satuan default</option>
+                                    {satuanList.map((satuan) => (
+                                      <option key={satuan.id} value={satuan.id}>
+                                        {satuan.nama}
                                       </option>
                                     ))}
-                                </select>
+                                  </select>
+                                </div>
                               </div>
 
-                              <div>
-                                <label className="text-xs font-medium mb-1 block">Jumlah</label>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  min="0.01"
-                                  value={inlineFormData.jumlah}
-                                  onChange={(e) => setInlineFormData({ ...inlineFormData, jumlah: e.target.value })}
-                                  placeholder="0.00"
-                                  className="h-8 text-sm"
-                                  required
-                                />
-                              </div>
-
-                              <div>
-                                <label className="text-xs font-medium mb-1 block">Satuan</label>
-                                <select
-                                  value={inlineFormData.satuan_id}
-                                  onChange={(e) => setInlineFormData({ ...inlineFormData, satuan_id: e.target.value })}
-                                  className="w-full px-2 py-1.5 text-sm rounded-md border border-input bg-background"
-                                  disabled={!inlineFormData.bahan_baku_id}
-                                >
-                                  <option value="">Satuan default</option>
-                                  {satuanList.map((satuan) => (
-                                    <option key={satuan.id} value={satuan.id}>
-                                      {satuan.nama}
-                                    </option>
-                                  ))}
-                                </select>
+                              <div className="flex gap-2 justify-end">
+                                <Button type="button" variant="outline" size="sm" onClick={handleCancelInlineAdd}>
+                                  Batal
+                                </Button>
+                                <Button type="button" size="sm" onClick={() => handleInlineSubmit(group.menu.id)} disabled={!inlineFormData.bahan_baku_id || !inlineFormData.jumlah} className="bg-green-600 hover:bg-green-700">
+                                  <Plus className="h-3 w-3 mr-1" />
+                                  Simpan
+                                </Button>
                               </div>
                             </div>
-
-                            <div className="flex gap-2 justify-end">
-                              <Button type="button" variant="outline" size="sm" onClick={handleCancelInlineAdd}>
-                                Batal
-                              </Button>
-                              <Button type="button" size="sm" onClick={() => handleInlineSubmit(group.menu.id)} disabled={!inlineFormData.bahan_baku_id || !inlineFormData.jumlah} className="bg-green-600 hover:bg-green-700">
-                                <Plus className="h-3 w-3 mr-1" />
-                                Simpan
-                              </Button>
-                            </div>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-center py-3">
-                          <Button variant="outline" size="sm" onClick={() => handleStartAddingToMenu(group.menu.id)} className="gap-2">
-                            <Plus className="h-3 w-3" />
-                            Tambah Bahan
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center py-3">
+                            <Button variant="outline" size="sm" onClick={() => handleStartAddingToMenu(group.menu.id)} className="gap-2">
+                              <Plus className="h-3 w-3" />
+                              Tambah Bahan
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           ))}

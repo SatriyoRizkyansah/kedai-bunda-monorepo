@@ -162,21 +162,29 @@ export function DashboardPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <DashboardWelcomeCard userName={user?.name} />
-        <DashboardStatsGrid stats={stats} trend={trend} userRole={user?.role} />
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <RevenueTrendCard data={stats.grafikPendapatan} />
-          <CategorySalesCard data={stats.penjualanPerKategori} />
+      <div className="relative">
+        <div className="pointer-events-none absolute inset-0 -z-10">
+          <div className="absolute -top-24 -left-16 h-72 w-72 rounded-full bg-emerald-200/40 blur-3xl dark:bg-emerald-950/40" />
+          <div className="absolute -bottom-24 -right-10 h-80 w-80 rounded-full bg-amber-200/40 blur-3xl dark:bg-amber-950/30" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background to-background" />
         </div>
 
-        {showInventoryCards && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <TopMenuCard data={stats.menuTerlaris} />
-            <LowStockAlertCard data={stats.bahanStokMenipis} />
+        <div className="space-y-6 sm:space-y-7">
+          <DashboardWelcomeCard userName={user?.name} />
+          <DashboardStatsGrid stats={stats} trend={trend} userRole={user?.role} />
+
+          <div className="grid grid-cols-2 gap-3 sm:gap-6">
+            <RevenueTrendCard data={stats.grafikPendapatan} />
+            <CategorySalesCard data={stats.penjualanPerKategori} />
           </div>
-        )}
+
+          {showInventoryCards && (
+            <div className="grid grid-cols-2 gap-3 sm:gap-6">
+              <TopMenuCard data={stats.menuTerlaris} />
+              <LowStockAlertCard data={stats.bahanStokMenipis} />
+            </div>
+          )}
+        </div>
       </div>
     </DashboardLayout>
   );
