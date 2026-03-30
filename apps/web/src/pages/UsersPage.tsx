@@ -201,26 +201,64 @@ export function UsersPage() {
           </div>
         </div>
 
-        {/* Users Table */}
+        {/* Users Table / Cards */}
         {loading ? (
           <LoadingScreen message="Memuat data pengguna..." size="md" />
+        ) : users.length === 0 ? (
+          <div className="bg-white dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800 py-10 text-center text-muted-foreground">
+            <UsersIcon className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50" />
+            Belum ada pengguna
+          </div>
         ) : (
-          <div className="bg-white dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
-            <div className="w-full overflow-x-auto">
-              <Table className="min-w-[720px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nama</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead className="text-center">Status</TableHead>
-                    <TableHead>Dibuat</TableHead>
-                    <TableHead className="text-right">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.length > 0 ? (
-                    users.map((user) => (
+          <>
+            <div className="space-y-3 sm:hidden">
+              {users.map((user) => (
+                <div key={user.id} className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-foreground">{user.name}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{user.email}</p>
+                    </div>
+                    <Badge className={getRoleBadgeColor(user.role)}>{user.role === "super_admin" ? "Super Admin" : user.role === "admin" ? "Admin" : "Kasir"}</Badge>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Dibuat</span>
+                    <span>{new Date(user.created_at).toLocaleDateString("id-ID")}</span>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <Badge variant={user.aktif ? "default" : "secondary"}>{user.aktif ? "Aktif" : "Nonaktif"}</Badge>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => handleOpenDialog(user)} className="gap-1 h-8">
+                        <Edit2 className="h-3.5 w-3.5" />
+                        Edit
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleDeleteClick(user)} className="gap-1 h-8 text-destructive hover:text-destructive">
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Hapus
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden sm:block bg-white dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
+              <div className="w-full overflow-x-auto">
+                <Table className="min-w-[720px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nama</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead className="text-center">Status</TableHead>
+                      <TableHead>Dibuat</TableHead>
+                      <TableHead className="text-right">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {users.map((user) => (
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">{user.name}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
@@ -244,19 +282,12 @@ export function UsersPage() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                        <UsersIcon className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50" />
-                        Belum ada pengguna
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
-          </div>
+          </>
         )}
 
         {/* Create/Edit Dialog */}
