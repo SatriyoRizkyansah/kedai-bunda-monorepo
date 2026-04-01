@@ -46,7 +46,7 @@ const buildStokCostMaps = (stokLog: LaporanStokLog) => {
   return { bahanUnitCost, menuUnitCost };
 };
 
-const resolveStokLogRow = (stokLog: LaporanStokLog, log: LaporanStokLog["logs"][number], maps: ReturnType<typeof buildStokCostMaps>) => {
+const resolveStokLogRow = (_stokLog: LaporanStokLog, log: LaporanStokLog["logs"][number], maps: ReturnType<typeof buildStokCostMaps>) => {
   const isMenuLog = (log as any).source === "menu" || Boolean((log as any).menu_id);
   const itemName = isMenuLog ? ((log as any).menu?.nama ?? "-") : (log.bahan_baku?.nama ?? "-");
   const satuan = isMenuLog ? "unit" : (log.bahan_baku?.satuan_dasar ?? "unit");

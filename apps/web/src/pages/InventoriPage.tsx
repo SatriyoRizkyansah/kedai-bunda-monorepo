@@ -1,6 +1,6 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowRightLeft, Layers, Package, TrendingDown } from "lucide-react";
+import { Layers, Package, TrendingDown } from "lucide-react";
 import { BahanBakuTab } from "./inventori/BahanBakuTab";
 import { KomposisiMenuTab } from "./inventori/KomposisiMenuTab";
 import { KonversiBahanTab } from "./inventori/KonversiBahanTab";

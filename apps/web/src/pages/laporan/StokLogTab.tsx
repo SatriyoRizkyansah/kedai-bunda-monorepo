@@ -37,7 +37,7 @@ export function StokLogTab({ loading, laporan, period, showExport = true }: Stok
       if (!menuId || !hasHarga || log.tipe !== "masuk" || !log.jumlah || log.jumlah <= 0) return;
       const current = menuTotalsMap.get(menuId) || { totalHarga: 0, totalQty: 0 };
       menuTotalsMap.set(menuId, {
-        totalHarga: current.totalHarga + log.harga_beli,
+        totalHarga: current.totalHarga + (log.harga_beli as number),
         totalQty: current.totalQty + log.jumlah,
       });
     });
@@ -282,11 +282,11 @@ export function StokLogTab({ loading, laporan, period, showExport = true }: Stok
                             <div className="grid grid-cols-2 gap-3">
                               <div>
                                 <p className="text-xs text-amber-600 dark:text-amber-400">Total Harga</p>
-                                <p className="text-sm font-bold text-amber-700 dark:text-amber-300">{formatCurrency(totalHarga)}</p>
+                                <p className="text-sm font-bold text-amber-700 dark:text-amber-300">{formatCurrency(totalHarga as number)}</p>
                               </div>
                               <div>
                                 <p className="text-xs text-amber-600 dark:text-amber-400">Per Unit</p>
-                                <p className="text-sm font-bold text-amber-700 dark:text-amber-300">{Math.abs(log.jumlah) > 0 ? formatCurrency(totalHarga / Math.abs(log.jumlah)) : "-"}</p>
+                                <p className="text-sm font-bold text-amber-700 dark:text-amber-300">{Math.abs(log.jumlah) > 0 ? formatCurrency((totalHarga as number) / Math.abs(log.jumlah)) : "-"}</p>
                               </div>
                             </div>
                           </div>
