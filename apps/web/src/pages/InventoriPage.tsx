@@ -25,14 +25,14 @@ export function InventoriPage() {
               <TrendingDown className="h-4 w-4" />
               <span>Tracking</span>
             </TabsTrigger>
-            <TabsTrigger value="komposisi" className="flex-col gap-1 py-2 text-[11px] leading-tight whitespace-normal text-center">
+            <TabsTrigger value="komposisi" className="col-span-2 flex-col gap-1 py-2 text-[11px] leading-tight whitespace-normal text-center">
               <Layers className="h-4 w-4" />
               <span>Komposisi</span>
             </TabsTrigger>
-            <TabsTrigger value="konversi" className="flex-col gap-1 py-2 text-[11px] leading-tight whitespace-normal text-center">
+            {/* <TabsTrigger value="konversi" className="flex-col gap-1 py-2 text-[11px] leading-tight whitespace-normal text-center">
               <ArrowRightLeft className="h-4 w-4" />
               <span>Konversi</span>
-            </TabsTrigger>
+            </TabsTrigger> */}
           </TabsList>
 
           <div className="hidden w-full overflow-x-auto sm:block">
@@ -49,31 +49,10 @@ export function InventoriPage() {
                 <Layers className="h-4 w-4" />
                 <span className="text-sm">Komposisi</span>
               </TabsTrigger>
-              <TabsTrigger value="konversi" className="gap-2 min-w-[130px] justify-center">
+              {/* <TabsTrigger value="konversi" className="gap-2 min-w-[130px] justify-center">
                 <ArrowRightLeft className="h-4 w-4" />
                 <span className="text-sm">Konversi</span>
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
-          <div className="hidden w-full overflow-x-auto sm:block">
-            <TabsList className="inline-flex min-w-max gap-2 p-1">
-              <TabsTrigger value="bahan-baku" className="gap-2 min-w-[130px] justify-center">
-                <Package className="h-4 w-4" />
-                <span className="text-sm">Bahan Baku</span>
-              </TabsTrigger>
-              <TabsTrigger value="tracking" className="gap-2 min-w-[130px] justify-center">
-                <TrendingDown className="h-4 w-4" />
-                <span className="text-sm">Tracking</span>
-              </TabsTrigger>
-              <TabsTrigger value="komposisi" className="gap-2 min-w-[130px] justify-center">
-                <Layers className="h-4 w-4" />
-                <span className="text-sm">Komposisi</span>
-              </TabsTrigger>
-              <TabsTrigger value="konversi" className="gap-2 min-w-[130px] justify-center">
-                <ArrowRightLeft className="h-4 w-4" />
-                <span className="text-sm">Konversi</span>
-              </TabsTrigger>
+              </TabsTrigger> */}
             </TabsList>
           </div>
 

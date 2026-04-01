@@ -48,17 +48,16 @@ export function StokMenuDialog({ open, stokItem, formData, onFormDataChange, onS
               </label>
               <Input
                 id="harga_beli_stok_menu"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.harga_beli}
-                onChange={(e) =>
+                type="text"
+                value={formData.harga_beli ? new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(parseFloat(formData.harga_beli) || 0) : ""}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^\d]/g, "");
                   onFormDataChange({
                     ...formData,
-                    harga_beli: e.target.value,
-                  })
-                }
-                placeholder="Kosongkan jika tidak ada (opsional)"
+                    harga_beli: value,
+                  });
+                }}
+                placeholder="Rp 0"
                 disabled={isLoading}
               />
               <p className="text-xs text-muted-foreground">Total harga pembelian untuk stok ini (opsional)</p>

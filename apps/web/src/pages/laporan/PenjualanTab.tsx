@@ -11,9 +11,10 @@ interface PenjualanTabProps {
   loading: boolean;
   laporan: LaporanPenjualan | null;
   period: PeriodDate;
+  showExport?: boolean;
 }
 
-export function PenjualanTab({ loading, laporan, period }: PenjualanTabProps) {
+export function PenjualanTab({ loading, laporan, period, showExport = true }: PenjualanTabProps) {
   const [expandedKategori, setExpandedKategori] = useState<number | null>(null);
 
   const handleExport = () => {
@@ -39,12 +40,14 @@ export function PenjualanTab({ loading, laporan, period }: PenjualanTabProps) {
   return (
     <div className="space-y-6">
       {/* Export Button */}
-      <div className="flex flex-col sm:flex-row sm:justify-end">
-        <Button onClick={handleExport} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
-          <FileSpreadsheet className="h-4 w-4 mr-2" />
-          Export Excel
-        </Button>
-      </div>
+      {showExport && (
+        <div className="flex flex-col sm:flex-row sm:justify-end">
+          <Button onClick={handleExport} className="w-full sm:w-auto">
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
+            Export Excel
+          </Button>
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">

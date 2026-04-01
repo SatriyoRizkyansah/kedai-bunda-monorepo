@@ -475,29 +475,38 @@ class DashboardController extends Controller
         // Ringkasan total dari kedua sumber
         $stokMasuk = $allLogs->where('tipe', 'masuk');
         $totalStokMasuk = $stokMasuk->sum('jumlah');
-        $nilaiStokMasuk = $stokMasuk->sum(function($log) {
-            return $log['harga_beli'] ?? 0;
-        });
         
         $stokKeluar = $allLogs->where('tipe', 'keluar');
         $totalStokKeluar = $stokKeluar->sum('jumlah');
-        $nilaiStokKeluar = $stokKeluar->sum(function($log) {
-            return $log['harga_beli'] ?? 0;
-        });
         
-        // Group by bahan baku dengan detail per batch/log
+        // Group by bahan baku dengan nilai yang pakai harga per unit jika harga_beli kosong
         $perBahanBaku = $stokLogs->groupBy('bahan_baku_id')->map(function($logs) {
             $bahanBaku = $logs->first()->bahanBaku;
-            $masuk = $logs->where('tipe', 'masuk')->sum('jumlah');
-            $keluar = $logs->where('tipe', 'keluar')->sum('jumlah');
+            $hargaPerSatuan = (float) ($bahanBaku->harga_per_satuan ?? 0);
+
+            $masukLogs = $logs->where('tipe', 'masuk');
+            $keluarLogs = $logs->where('tipe', 'keluar');
+
+            $masuk = $masukLogs->sum('jumlah');
+            $keluar = $keluarLogs->sum('jumlah');
             
-            // Hitung nilai dengan harga_beli (total harga batch)
-            $nilaiMasuk = $logs->where('tipe', 'masuk')->sum(function($log) {
-                return $log->harga_beli ?? 0;
+            $nilaiMasuk = $masukLogs->sum(function($log) use ($hargaPerSatuan) {
+                if ($log->harga_beli !== null) {
+                    return (float) $log->harga_beli;
+                }
+
+                return (float) $log->jumlah * $hargaPerSatuan;
             });
+
+            $hargaPerUnit = $masuk > 0 ? ($nilaiMasuk / $masuk) : $hargaPerSatuan;
             
-            $nilaiKeluar = $logs->where('tipe', 'keluar')->sum(function($log) {
-                return $log->harga_beli ?? 0;
+            $nilaiKeluar = $keluarLogs->sum(function($log) use ($hargaPerUnit, $hargaPerSatuan) {
+                if ($log->harga_beli !== null) {
+                    return (float) $log->harga_beli;
+                }
+
+                $cost = $hargaPerUnit > 0 ? $hargaPerUnit : $hargaPerSatuan;
+                return (float) $log->jumlah * $cost;
             });
             
             return [
@@ -511,6 +520,20 @@ class DashboardController extends Controller
                 'nilai_keluar' => $nilaiKeluar,
             ];
         })->values();
+
+        $nilaiStokMasukBahan = $perBahanBaku->sum('nilai_masuk');
+        $nilaiStokKeluarBahan = $perBahanBaku->sum('nilai_keluar');
+
+        $nilaiStokMasukMenu = $menuStokLogs->where('tipe', 'masuk')->sum(function($log) {
+            return $log->harga_beli ?? 0;
+        });
+
+        $nilaiStokKeluarMenu = $menuStokLogs->where('tipe', 'keluar')->sum(function($log) {
+            return $log->harga_beli ?? 0;
+        });
+
+        $nilaiStokMasuk = $nilaiStokMasukBahan + $nilaiStokMasukMenu;
+        $nilaiStokKeluar = $nilaiStokKeluarBahan + $nilaiStokKeluarMenu;
         
         return response()->json([
             'sukses' => true,
@@ -571,7 +594,7 @@ class DashboardController extends Controller
         $tanggalSelesai = $request->input('tanggal_selesai', Carbon::now()->format('Y-m-d'));
         
         // Pendapatan dari penjualan
-        $transaksi = Transaksi::with(['detailTransaksi.menu.komposisi.konversiBahan.bahanBaku'])
+        $transaksi = Transaksi::with(['detailTransaksi.menu.komposisiMenu.bahanBaku'])
             ->whereBetween('created_at', [
                 $tanggalMulai . ' 00:00:00',
                 $tanggalSelesai . ' 23:59:59'
@@ -581,6 +604,36 @@ class DashboardController extends Controller
             
         $totalPendapatan = $transaksi->sum('total');
         $totalTransaksi = $transaksi->count();
+
+        $avgBahanCost = StokLog::select(
+                'bahan_baku_id',
+                DB::raw('SUM(harga_beli) as total_harga'),
+                DB::raw('SUM(jumlah) as total_jumlah')
+            )
+            ->where('tipe', 'masuk')
+            ->whereNotNull('harga_beli')
+            ->groupBy('bahan_baku_id')
+            ->get()
+            ->keyBy('bahan_baku_id')
+            ->map(function ($row) {
+                $jumlah = (float) $row->total_jumlah;
+                return $jumlah > 0 ? (float) $row->total_harga / $jumlah : 0.0;
+            });
+
+        $avgMenuCost = MenuStokLog::select(
+                'menu_id',
+                DB::raw('SUM(harga_beli) as total_harga'),
+                DB::raw('SUM(jumlah) as total_jumlah')
+            )
+            ->where('tipe', 'masuk')
+            ->whereNotNull('harga_beli')
+            ->groupBy('menu_id')
+            ->get()
+            ->keyBy('menu_id')
+            ->map(function ($row) {
+                $jumlah = (float) $row->total_jumlah;
+                return $jumlah > 0 ? (float) $row->total_harga / $jumlah : 0.0;
+            });
         
         // Hitung perkiraan HPP (Harga Pokok Penjualan)
         $totalHPP = 0;
@@ -594,14 +647,17 @@ class DashboardController extends Controller
                 
                 // Hitung HPP dari komposisi
                 $hppPerUnit = 0;
-                if ($menu && $menu->komposisi) {
-                    foreach ($menu->komposisi as $komp) {
-                        $konversi = $komp->konversiBahan;
-                        if ($konversi && $konversi->bahanBaku) {
-                            // Hitung biaya bahan baku per unit menu
-                            $hargaPerSatuanDasar = $konversi->bahanBaku->harga_per_satuan ?? 0;
-                            $biayaPerUnit = ($komp->jumlah / $konversi->jumlah_konversi) * $hargaPerSatuanDasar;
-                            $hppPerUnit += $biayaPerUnit;
+                if ($menu) {
+                    if ($menu->kelola_stok_mandiri) {
+                        $hppPerUnit = (float) ($avgMenuCost[$menu->id] ?? 0);
+                    } elseif ($menu->komposisiMenu) {
+                        foreach ($menu->komposisiMenu as $komp) {
+                            $bahanBaku = $komp->bahanBaku;
+                            if ($bahanBaku) {
+                                $avgCost = (float) ($avgBahanCost[$bahanBaku->id] ?? 0);
+                                $hargaPerSatuan = $avgCost > 0 ? $avgCost : (float) ($bahanBaku->harga_per_satuan ?? 0);
+                                $hppPerUnit += ((float) $komp->jumlah) * $hargaPerSatuan;
+                            }
                         }
                     }
                 }
@@ -634,14 +690,20 @@ class DashboardController extends Controller
         }
         
         // Hitung biaya stok masuk (pembelian bahan baku)
-        $biayaPembelian = StokLog::where('tipe', 'masuk')
+        $biayaPembelian = StokLog::with('bahanBaku')
+            ->where('tipe', 'masuk')
             ->whereBetween('created_at', [
                 $tanggalMulai . ' 00:00:00',
                 $tanggalSelesai . ' 23:59:59'
             ])
             ->get()
             ->sum(function($log) {
-                return $log->jumlah * ($log->bahanBaku->harga_per_satuan ?? 0);
+                if (!is_null($log->harga_beli)) {
+                    return (float) $log->harga_beli;
+                }
+
+                $hargaPerSatuan = (float) ($log->bahanBaku->harga_per_satuan ?? 0);
+                return (float) $log->jumlah * $hargaPerSatuan;
             });
         
         $labaKotor = $totalPendapatan - $totalHPP;

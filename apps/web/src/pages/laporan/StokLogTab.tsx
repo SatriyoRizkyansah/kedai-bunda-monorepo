@@ -12,14 +12,41 @@ interface StokLogTabProps {
   loading: boolean;
   laporan: LaporanStokLog | null;
   period: PeriodDate;
+  showExport?: boolean;
 }
 
-export function StokLogTab({ loading, laporan, period }: StokLogTabProps) {
+export function StokLogTab({ loading, laporan, period, showExport = true }: StokLogTabProps) {
   const handleExport = () => {
     if (laporan) {
       exportStokLogToExcel(laporan, period);
     }
   };
+
+  const bahanCostMap = new Map<number, number>();
+  const menuCostMap = new Map<number, number>();
+  const menuTotalsMap = new Map<number, { totalHarga: number; totalQty: number }>();
+  if (laporan) {
+    laporan.per_bahan_baku.forEach((bahan) => {
+      const unitCost = bahan.stok_masuk > 0 ? bahan.nilai_masuk / bahan.stok_masuk : bahan.stok_keluar > 0 ? bahan.nilai_keluar / bahan.stok_keluar : 0;
+      bahanCostMap.set(bahan.bahan_baku_id, unitCost || 0);
+    });
+
+    laporan.logs.forEach((log) => {
+      const menuId = (log as any).menu_id as number | undefined;
+      const hasHarga = log.harga_beli !== null && log.harga_beli !== undefined;
+      if (!menuId || !hasHarga || log.tipe !== "masuk" || !log.jumlah || log.jumlah <= 0) return;
+      const current = menuTotalsMap.get(menuId) || { totalHarga: 0, totalQty: 0 };
+      menuTotalsMap.set(menuId, {
+        totalHarga: current.totalHarga + log.harga_beli,
+        totalQty: current.totalQty + log.jumlah,
+      });
+    });
+
+    menuTotalsMap.forEach((totals, menuId) => {
+      const unitCost = totals.totalQty > 0 ? totals.totalHarga / totals.totalQty : 0;
+      menuCostMap.set(menuId, unitCost || 0);
+    });
+  }
 
   if (loading) {
     return <LoadingScreen message="Memuat laporan stok..." size="md" />;
@@ -38,12 +65,14 @@ export function StokLogTab({ loading, laporan, period }: StokLogTabProps) {
   return (
     <div className="space-y-6">
       {/* Export Button */}
-      <div className="flex flex-col sm:flex-row sm:justify-end">
-        <Button onClick={handleExport} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
-          <FileSpreadsheet className="h-4 w-4 mr-2" />
-          Export Excel
-        </Button>
-      </div>
+      {showExport && (
+        <div className="flex flex-col sm:flex-row sm:justify-end">
+          <Button onClick={handleExport} className="w-full sm:w-auto">
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
+            Export Excel
+          </Button>
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
@@ -232,24 +261,37 @@ export function StokLogTab({ loading, laporan, period }: StokLogTabProps) {
                         </div>
                       </div>
 
-                      {/* Harga Batch - Show only if present */}
-                      {log.harga_beli ? (
-                        <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                          <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mb-2">💰 {isMenuLog ? "Harga Input" : "Harga Batch"}</p>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <p className="text-xs text-amber-600 dark:text-amber-400">Total Harga</p>
-                              <p className="text-sm font-bold text-amber-700 dark:text-amber-300">{formatCurrency(log.harga_beli)}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-amber-600 dark:text-amber-400">Per Unit</p>
-                              <p className="text-sm font-bold text-amber-700 dark:text-amber-300">{log.jumlah > 0 ? formatCurrency(log.harga_beli / log.jumlah) : "-"}</p>
+                      {/* Harga Batch / Estimasi */}
+                      {(() => {
+                        const hasHarga = log.harga_beli !== null && log.harga_beli !== undefined;
+                        const bahanUnitCost = log.bahan_baku_id ? bahanCostMap.get(log.bahan_baku_id) || 0 : 0;
+                        const menuId = (log as any).menu_id as number | undefined;
+                        const menuUnitCost = menuId ? menuCostMap.get(menuId) || 0 : 0;
+                        const unitCost = isMenuLog ? menuUnitCost : bahanUnitCost;
+                        const estimatedTotal = !hasHarga && unitCost > 0 ? Math.abs(log.jumlah) * unitCost : null;
+                        const totalHarga = hasHarga ? log.harga_beli : estimatedTotal;
+                        const label = hasHarga ? (isMenuLog ? "Harga Input" : "Harga Batch") : unitCost > 0 ? "Estimasi Harga" : "Harga Input";
+
+                        if (totalHarga === null) {
+                          return <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-900/20 rounded-lg text-xs text-muted-foreground italic">(Tanpa harga input)</div>;
+                        }
+
+                        return (
+                          <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                            <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mb-2">💰 {label}</p>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <p className="text-xs text-amber-600 dark:text-amber-400">Total Harga</p>
+                                <p className="text-sm font-bold text-amber-700 dark:text-amber-300">{formatCurrency(totalHarga)}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-amber-600 dark:text-amber-400">Per Unit</p>
+                                <p className="text-sm font-bold text-amber-700 dark:text-amber-300">{Math.abs(log.jumlah) > 0 ? formatCurrency(totalHarga / Math.abs(log.jumlah)) : "-"}</p>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ) : (
-                        <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-900/20 rounded-lg text-xs text-muted-foreground italic">(Tanpa harga input)</div>
-                      )}
+                        );
+                      })()}
                     </div>
                   );
                 })}
