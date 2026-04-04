@@ -2,19 +2,14 @@ import { LOGIN_MESSAGES } from "./utils";
 
 export function LoginHeader() {
   return (
-    <div className="space-y-2">
-      {/* Logo */}
-      <div className="flex items-center gap-2 mb-6">
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded-full bg-primary"></div>
-          <div className="w-5 h-3 rounded-full bg-primary/60"></div>
-          <div className="w-3 h-3 rounded-full bg-primary"></div>
-        </div>
+    <div className="space-y-3">
+      <div className="inline-flex items-center gap-2 rounded-full bg-[color:var(--login-ink)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-[color:var(--login-cream)] shadow-md">
+        <span className="h-2 w-2 rounded-full bg-[color:var(--login-accent)]" />
+        {LOGIN_MESSAGES.BADGE}
       </div>
 
-      {/* Welcome Text */}
-      <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{LOGIN_MESSAGES.WELCOME}</h1>
-      <p className="text-gray-500">{LOGIN_MESSAGES.SUBTITLE}</p>
+      <h1 className="login-font-display text-3xl sm:text-4xl font-semibold text-[color:var(--login-ink)] leading-tight">{LOGIN_MESSAGES.WELCOME}</h1>
+      <p className="text-[color:var(--login-muted)] leading-relaxed">{LOGIN_MESSAGES.SUBTITLE}</p>
     </div>
   );
 }

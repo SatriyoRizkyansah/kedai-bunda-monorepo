@@ -32,6 +32,7 @@ export const validateLoginForm = (data: LoginFormData): string | null => {
 
 // Constants
 export const LOGIN_MESSAGES = {
+  BADGE: "KEDAI BUNDA POS",
   WELCOME: "Selamat Datang di Kedai Bunda!",
   SUBTITLE: "Mari mulai hari ini dengan senyuman dan layani pelanggan dengan sepenuh hati.",
   LOGIN_BUTTON: "Masuk",

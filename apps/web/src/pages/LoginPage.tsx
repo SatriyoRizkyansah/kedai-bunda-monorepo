@@ -79,19 +79,22 @@ export function LoginPage() {
 
   return (
     <LoginContainer
+      hero={<LoginImage variant="compact" />}
       left={
-        <div className="space-y-8">
+        <div className="space-y-6 sm:space-y-8">
           <LoginHeader />
-          <LoginForm
-            formData={formData}
-            showPassword={showPassword}
-            error={error}
-            loading={loading}
-            onEmailChange={handleEmailChange}
-            onPasswordChange={handlePasswordChange}
-            onTogglePassword={handleTogglePassword}
-            onSubmit={handleSubmit}
-          />
+          <div className="rounded-3xl border border-white/70 bg-white/85 p-5 sm:p-7 shadow-[0_20px_60px_rgba(15,15,15,0.12)] backdrop-blur-xl">
+            <LoginForm
+              formData={formData}
+              showPassword={showPassword}
+              error={error}
+              loading={loading}
+              onEmailChange={handleEmailChange}
+              onPasswordChange={handlePasswordChange}
+              onTogglePassword={handleTogglePassword}
+              onSubmit={handleSubmit}
+            />
+          </div>
           <LoginFooter />
         </div>
       }
@@ -102,8 +105,10 @@ export function LoginPage() {
 
 function LoginFooter() {
   return (
-    <div className="pt-8 border-t border-gray-100 flex items-center justify-between text-sm text-gray-400">
-      <span className="hover:text-gray-600 cursor-pointer transition-colors">{LOGIN_MESSAGES.SUPPORT}</span>
+    <div className="pt-6 border-t border-white/70 flex flex-col gap-3 text-xs sm:text-sm text-[color:var(--login-muted)] sm:flex-row sm:items-center sm:justify-between">
+      <button type="button" className="text-left font-semibold text-[color:var(--login-ink)] hover:text-[color:var(--login-accent-deep)] transition-colors">
+        {LOGIN_MESSAGES.SUPPORT}
+      </button>
       <span>{LOGIN_MESSAGES.COPYRIGHT}</span>
     </div>
   );

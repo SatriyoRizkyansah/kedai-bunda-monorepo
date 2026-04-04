@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -34,6 +36,29 @@
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+  }
+}
+
+@layer components {
+  .login-shell {
+    --login-ink: #1f1a16;
+    --login-muted: #6f6a63;
+    --login-cream: #fff6ee;
+    --login-accent: #f08a3c;
+    --login-accent-deep: #df6f1c;
+    --login-sage: #cfe6d1;
+    --login-border: rgba(24, 20, 16, 0.14);
+    --ring: var(--login-accent);
+    --input: var(--login-border);
+    --radius: 18px;
+    --font-sans: "Space Grotesk", "Segoe UI", sans-serif;
+    --login-display: "Fraunces", "Times New Roman", serif;
+    font-family: var(--font-sans);
+  }
+
+  .login-font-display {
+    font-family: var(--login-display);
+    letter-spacing: -0.02em;
   }
 }
 

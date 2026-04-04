@@ -1,5 +1,5 @@
-const CACHE_NAME = "kedai-bunda-v1";
-const URLS_TO_CACHE = ["/", "/index.html", "/manifest.json"];
+const CACHE_NAME = "kedai-bunda-v2";
+const URLS_TO_CACHE = ["/", "/index.html"];
 
 // Install event
 self.addEventListener("install", (event) => {
@@ -8,7 +8,7 @@ self.addEventListener("install", (event) => {
       return cache.addAll(URLS_TO_CACHE).catch((err) => {
         console.log("Cache addAll error:", err);
       });
-    })
+    }),
   );
   self.skipWaiting();
 });
@@ -22,9 +22,9 @@ self.addEventListener("activate", (event) => {
           if (cacheName !== CACHE_NAME) {
             return caches.delete(cacheName);
           }
-        })
+        }),
       );
-    })
+    }),
   );
   self.clients.claim();
 });
@@ -52,6 +52,6 @@ self.addEventListener("fetch", (event) => {
       })
       .catch(() => {
         return caches.match(event.request).then((response) => response || caches.match("/index.html"));
-      })
+      }),
   );
 });
