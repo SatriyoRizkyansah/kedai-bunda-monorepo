@@ -7,6 +7,8 @@ use App\Http\Resources\TransaksiResource;
 use App\Models\Transaksi;
 use App\Models\DetailTransaksi;
 use App\Models\Menu;
+use App\Models\MenuStokLog;
+use App\Models\StokLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -288,6 +290,71 @@ class TransaksiController extends Controller
                 }
             }
 
+            $manualMenuIds = [];
+            foreach ($menuCache as $menuId => $menu) {
+                if ($menu->kelola_stok_mandiri) {
+                    $manualMenuIds[] = $menuId;
+                }
+            }
+
+            $avgMenuCost = [];
+            if (!empty($manualMenuIds)) {
+                $avgMenuCost = MenuStokLog::select(
+                        'menu_id',
+                        DB::raw('SUM(harga_beli) as total_harga'),
+                        DB::raw('SUM(jumlah) as total_jumlah')
+                    )
+                    ->where('tipe', 'masuk')
+                    ->whereNotNull('harga_beli')
+                    ->whereIn('menu_id', $manualMenuIds)
+                    ->where('created_at', '<=', now())
+                    ->groupBy('menu_id')
+                    ->get()
+                    ->keyBy('menu_id')
+                    ->map(function ($row) {
+                        $jumlah = (float) $row->total_jumlah;
+                        return $jumlah > 0 ? (float) $row->total_harga / $jumlah : 0.0;
+                    })
+                    ->all();
+            }
+
+            $avgBahanCost = [];
+            if (!empty($bahanUsage)) {
+                $avgBahanCost = StokLog::select(
+                        'bahan_baku_id',
+                        DB::raw('SUM(harga_beli) as total_harga'),
+                        DB::raw('SUM(jumlah) as total_jumlah')
+                    )
+                    ->where('tipe', 'masuk')
+                    ->whereNotNull('harga_beli')
+                    ->whereIn('bahan_baku_id', array_keys($bahanUsage))
+                    ->where('created_at', '<=', now())
+                    ->groupBy('bahan_baku_id')
+                    ->get()
+                    ->keyBy('bahan_baku_id')
+                    ->map(function ($row) {
+                        $jumlah = (float) $row->total_jumlah;
+                        return $jumlah > 0 ? (float) $row->total_harga / $jumlah : 0.0;
+                    })
+                    ->all();
+            }
+
+            $calculateHppPerUnit = function (Menu $menu) use ($avgBahanCost): float {
+                $hppPerUnit = 0.0;
+                foreach ($menu->komposisiMenu as $komp) {
+                    $bahanBaku = $komp->bahanBaku;
+                    if (!$bahanBaku) {
+                        continue;
+                    }
+
+                    $avgCost = (float) ($avgBahanCost[$bahanBaku->id] ?? 0);
+                    $hargaPerSatuan = $avgCost > 0 ? $avgCost : (float) ($bahanBaku->harga_per_satuan ?? 0);
+                    $hppPerUnit += ((float) $komp->jumlah) * $hargaPerSatuan;
+                }
+
+                return $hppPerUnit;
+            };
+
             $tipeTransaksi = $request->input('tipe_transaksi', 'umum');
             $metodePembayaran = $request->metode_pembayaran ?? 'tunai';
 
@@ -321,35 +388,31 @@ class TransaksiController extends Controller
 
             // Simpan detail transaksi dan kurangi stok
             foreach ($detailItems as $detail) {
-                DetailTransaksi::create([
-                    'transaksi_id' => $transaksi->id,
-                    'menu_id' => $detail['menu']->id,
-                    'jumlah' => $detail['jumlah'],
-                    'harga_satuan' => $detail['harga_satuan'],
-                    'subtotal' => $detail['subtotal']
-                ]);
+                $menuModel = $detail['menu'];
+                $jumlahTerjual = (int) $detail['jumlah'];
+                $hppPerUnit = 0.0;
+                $hppTotal = 0.0;
 
-                if ($detail['menu']->kelola_stok_mandiri) {
-                    $menuModel = $detail['menu'];
-                    $stokSebelum = (float) $menuModel->stok;
-                    $stokSesudah = $stokSebelum - $detail['jumlah'];
+                if ($menuModel->kelola_stok_mandiri) {
+                    $result = $menuModel->kurangiStokMandiri(
+                        $jumlahTerjual,
+                        $request->user_id,
+                        'Penjualan menu via transaksi POS',
+                        $transaksi->nomor_transaksi
+                    );
 
-                    if ($stokSesudah < 0) {
-                        throw new \Exception("Stok menu {$menuModel->nama} tidak mencukupi saat pemrosesan transaksi");
+                    $hppTotal = (float) $result['cost_total'];
+                    if ($hppTotal <= 0 && isset($avgMenuCost[$menuModel->id])) {
+                        $hppPerUnit = (float) $avgMenuCost[$menuModel->id];
+                        $hppTotal = $hppPerUnit * $jumlahTerjual;
+                        $result['log']->update(['harga_beli' => round($hppTotal, 2)]);
+                    } else {
+                        $hppPerUnit = $jumlahTerjual > 0 ? ($hppTotal / $jumlahTerjual) : 0.0;
                     }
-
-                    $menuModel->update(['stok' => $stokSesudah]);
-
-                    $menuModel->stokLog()->create([
-                        'user_id' => $request->user_id,
-                        'tipe' => 'keluar',
-                        'jumlah' => $detail['jumlah'],
-                        'stok_sebelum' => $stokSebelum,
-                        'stok_sesudah' => $stokSesudah,
-                        'referensi' => $transaksi->nomor_transaksi,
-                        'keterangan' => 'Penjualan menu via transaksi POS',
-                    ]);
                 } else {
+                    $hppPerUnit = $calculateHppPerUnit($menuModel);
+                    $hppTotal = $hppPerUnit * $jumlahTerjual;
+
                     // Kurangi stok bahan baku sesuai komposisi
                     foreach ($detail['menu']->komposisiMenu as $komposisi) {
                         $bahanBaku = $komposisi->bahanBaku;
@@ -379,6 +442,16 @@ class TransaksiController extends Controller
                         );
                     }
                 }
+
+                DetailTransaksi::create([
+                    'transaksi_id' => $transaksi->id,
+                    'menu_id' => $menuModel->id,
+                    'jumlah' => $jumlahTerjual,
+                    'harga_satuan' => $detail['harga_satuan'],
+                    'hpp_per_unit' => round($hppPerUnit, 2),
+                    'subtotal' => $detail['subtotal'],
+                    'hpp_total' => round($hppTotal, 2),
+                ]);
             }
 
             DB::commit();

@@ -717,24 +717,35 @@ class DashboardController extends Controller
                 $jumlahTerjual = $detail->jumlah;
                 $pendapatanMenu = $isUmum ? $detail->subtotal : 0;
                 
-                // Hitung HPP dari komposisi
-                $hppPerUnit = 0;
-                if ($menu) {
-                    if ($menu->kelola_stok_mandiri) {
-                        $hppPerUnit = (float) ($avgMenuCost[$menu->id] ?? 0);
-                    } elseif ($menu->komposisiMenu) {
-                        foreach ($menu->komposisiMenu as $komp) {
-                            $bahanBaku = $komp->bahanBaku;
-                            if ($bahanBaku) {
-                                $avgCost = (float) ($avgBahanCost[$bahanBaku->id] ?? 0);
-                                $hargaPerSatuan = $avgCost > 0 ? $avgCost : (float) ($bahanBaku->harga_per_satuan ?? 0);
-                                $hppPerUnit += ((float) $komp->jumlah) * $hargaPerSatuan;
+                $hppPerUnit = $detail->hpp_per_unit !== null ? (float) $detail->hpp_per_unit : null;
+                $hppTotal = $detail->hpp_total !== null ? (float) $detail->hpp_total : null;
+
+                if ($hppPerUnit === null && $hppTotal !== null && $jumlahTerjual > 0) {
+                    $hppPerUnit = $hppTotal / $jumlahTerjual;
+                }
+
+                // Hitung HPP dari komposisi jika belum ada snapshot
+                if ($hppPerUnit === null) {
+                    $hppPerUnit = 0;
+                    if ($menu) {
+                        if ($menu->kelola_stok_mandiri) {
+                            $hppPerUnit = (float) ($avgMenuCost[$menu->id] ?? 0);
+                        } elseif ($menu->komposisiMenu) {
+                            foreach ($menu->komposisiMenu as $komp) {
+                                $bahanBaku = $komp->bahanBaku;
+                                if ($bahanBaku) {
+                                    $avgCost = (float) ($avgBahanCost[$bahanBaku->id] ?? 0);
+                                    $hargaPerSatuan = $avgCost > 0 ? $avgCost : (float) ($bahanBaku->harga_per_satuan ?? 0);
+                                    $hppPerUnit += ((float) $komp->jumlah) * $hargaPerSatuan;
+                                }
                             }
                         }
                     }
                 }
-                
-                $hppTotal = $hppPerUnit * $jumlahTerjual;
+
+                if ($hppTotal === null) {
+                    $hppTotal = $hppPerUnit * $jumlahTerjual;
+                }
                 $totalHPP += $hppTotal;
                 $hppPerHari[$dateStr] = ($hppPerHari[$dateStr] ?? 0) + $hppTotal;
                 

@@ -21,6 +21,14 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
+Route::get('/api/uploads/menu/{filename}', function ($filename) {
+    $path = base_path('laravel/public/uploads/menu/' . $filename);
+
+    if (!file_exists($path)) abort(404);
+
+    return response()->file($path);
+});
+
 // Auth routes (public)
 Route::post('/login', [AuthController::class, 'login']);
 
@@ -83,6 +91,7 @@ Route::middleware(['auth:api'])->group(function () {
         Route::post('menu/{id}/tambah-stok', [MenuController::class, 'tambahStok']);
         Route::post('menu/{id}/kurangi-stok', [MenuController::class, 'kurangiStok']);
         Route::get('menu/{id}/stok-log', [MenuController::class, 'stokLog']);
+        Route::get('menu/{id}/batch-tracking', [MenuController::class, 'batchTracking']);
         
         // Komposisi Menu
         Route::apiResource('komposisi-menu', KomposisiMenuController::class);

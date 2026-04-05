@@ -14,12 +14,16 @@ class DetailTransaksi extends Model
         'menu_id',
         'jumlah',
         'harga_satuan',
+        'hpp_per_unit',
         'subtotal',
+        'hpp_total',
     ];
 
     protected $casts = [
         'harga_satuan' => 'decimal:2',
+        'hpp_per_unit' => 'decimal:2',
         'subtotal' => 'decimal:2',
+        'hpp_total' => 'decimal:2',
         'jumlah' => 'integer',
     ];
 

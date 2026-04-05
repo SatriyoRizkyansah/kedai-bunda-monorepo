@@ -72,6 +72,14 @@ class Menu extends Model
     }
 
     /**
+     * Relasi ke batch menu (untuk FIFO HPP manual)
+     */
+    public function batches(): HasMany
+    {
+        return $this->hasMany(BatchMenu::class);
+    }
+
+    /**
      * Hitung stok berdasarkan bahan baku (jika tidak kelola mandiri)
      * Menghitung berapa banyak menu yang bisa dibuat berdasarkan stok bahan baku
      */
@@ -119,5 +127,101 @@ class Menu extends Model
     public function getStokEfektifAttribute(): float
     {
         return $this->kelola_stok_mandiri ? $this->stok : $this->hitungStokDariBahanBaku();
+    }
+
+    public function tambahStokMandiri(
+        float $jumlah,
+        int $userId,
+        ?string $keterangan = null,
+        ?string $referensi = null,
+        ?float $hargaBeli = null
+    ): MenuStokLog {
+        $stokSebelum = (float) $this->stok;
+        $stokSesudah = $stokSebelum + $jumlah;
+
+        $this->update(['stok' => $stokSesudah]);
+
+        $log = $this->stokLog()->create([
+            'user_id' => $userId,
+            'tipe' => 'masuk',
+            'jumlah' => $jumlah,
+            'harga_beli' => $hargaBeli,
+            'stok_sebelum' => $stokSebelum,
+            'stok_sesudah' => $stokSesudah,
+            'referensi' => $referensi,
+            'keterangan' => $keterangan,
+        ]);
+
+        $this->batches()->create([
+            'menu_stok_log_id' => $log->id,
+            'jumlah_awal' => $jumlah,
+            'jumlah_sisa' => $jumlah,
+            'harga_beli' => $hargaBeli,
+            'keterangan' => $keterangan,
+        ]);
+
+        return $log;
+    }
+
+    public function kurangiStokMandiri(
+        float $jumlah,
+        int $userId,
+        ?string $keterangan = null,
+        ?string $referensi = null
+    ): array {
+        $stokSebelum = (float) $this->stok;
+        $stokSesudah = max(0, $stokSebelum - $jumlah);
+        $costTotal = $this->reduceStockFIFO($jumlah);
+
+        $this->update(['stok' => $stokSesudah]);
+
+        $log = $this->stokLog()->create([
+            'user_id' => $userId,
+            'tipe' => 'keluar',
+            'jumlah' => $jumlah,
+            'harga_beli' => $costTotal,
+            'stok_sebelum' => $stokSebelum,
+            'stok_sesudah' => $stokSesudah,
+            'referensi' => $referensi,
+            'keterangan' => $keterangan,
+        ]);
+
+        return [
+            'log' => $log,
+            'cost_total' => $costTotal,
+            'stok_sebelum' => $stokSebelum,
+            'stok_sesudah' => $stokSesudah,
+        ];
+    }
+
+    private function reduceStockFIFO(float $amount): float
+    {
+        $remaining = $amount;
+        $costTotal = 0.0;
+
+        $batches = $this->batches()
+            ->where('jumlah_sisa', '>', 0)
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        foreach ($batches as $batch) {
+            if ($remaining <= 0) {
+                break;
+            }
+
+            $available = (float) $batch->jumlah_sisa;
+            $useAmount = $available >= $remaining ? $remaining : $available;
+
+            $hargaPerUnit = 0.0;
+            if ($batch->harga_beli !== null && (float) $batch->jumlah_awal > 0) {
+                $hargaPerUnit = (float) $batch->harga_beli / (float) $batch->jumlah_awal;
+            }
+
+            $costTotal += $useAmount * $hargaPerUnit;
+            $batch->decrement('jumlah_sisa', $useAmount);
+            $remaining -= $useAmount;
+        }
+
+        return $costTotal;
     }
 }

@@ -5,7 +5,25 @@ import { Badge } from "@/components/ui/badge";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import api from "@/lib/api";
 import type { BahanBaku, Menu } from "@/lib/types";
-import type { StokLog } from "../menu/types";
+type MenuBatch = {
+  id: number;
+  jumlah_awal: number | string;
+  jumlah_sisa: number | string;
+  harga_beli: number | string | null;
+  keterangan?: string | null;
+  created_at: string;
+};
+
+type MenuBatchData = {
+  menu: Menu;
+  batches: MenuBatch[];
+  summary?: {
+    total_batches?: number;
+    active_batches?: number;
+    stok_tersedia?: number;
+    satuan?: { nama?: string; singkatan?: string } | null;
+  };
+};
 
 export function TrackingBatchTab() {
   const [bahanBakuList, setBahanBakuList] = useState<BahanBaku[]>([]);
@@ -16,9 +34,9 @@ export function TrackingBatchTab() {
 
   const [menuManualList, setMenuManualList] = useState<Menu[]>([]);
   const [selectedMenu, setSelectedMenu] = useState<Menu | null>(null);
-  const [menuLogs, setMenuLogs] = useState<StokLog[]>([]);
+  const [menuBatchData, setMenuBatchData] = useState<MenuBatchData | null>(null);
   const [loadingMenuList, setLoadingMenuList] = useState(false);
-  const [loadingMenuLogs, setLoadingMenuLogs] = useState(false);
+  const [loadingMenuBatch, setLoadingMenuBatch] = useState(false);
 
   useEffect(() => {
     fetchBahanBaku();
@@ -78,16 +96,16 @@ export function TrackingBatchTab() {
 
   const handleSelectMenu = async (menu: Menu) => {
     setSelectedMenu(menu);
-    setLoadingMenuLogs(true);
+    setLoadingMenuBatch(true);
 
     try {
-      const response = await api.get(`/menu/${menu.id}/stok-log`);
-      setMenuLogs(response.data.data?.data || []);
+      const response = await api.get(`/menu/${menu.id}/batch-tracking`);
+      setMenuBatchData(response.data.data || null);
     } catch (error) {
-      console.error("Error fetching menu logs:", error);
-      setMenuLogs([]);
+      console.error("Error fetching menu batch:", error);
+      setMenuBatchData(null);
     } finally {
-      setLoadingMenuLogs(false);
+      setLoadingMenuBatch(false);
     }
   };
 
@@ -265,7 +283,7 @@ export function TrackingBatchTab() {
             <UtensilsCrossed className="h-5 w-5 text-amber-700 dark:text-amber-400 mt-0.5" />
             <div>
               <h3 className="font-medium text-sm text-amber-800 dark:text-amber-300">Tracking Menu Manual</h3>
-              <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">Riwayat stok menu manual dicatat per perubahan (tambah/kurang). Tidak menggunakan FIFO batch.</p>
+              <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">Stok menu manual dicatat per batch dan dikurangi dengan FIFO untuk menjaga HPP tetap konsisten.</p>
             </div>
           </div>
         </CardContent>
@@ -313,42 +331,79 @@ export function TrackingBatchTab() {
 
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle className="text-sm">Riwayat Stok Menu</CardTitle>
+              <CardTitle className="text-sm">Rincian Batch Menu</CardTitle>
               <p className="text-xs text-muted-foreground mt-2">{selectedMenu ? selectedMenu.nama : "Pilih menu manual"}</p>
+              <div className="space-y-2 mt-3">
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Total Batch:</span>
+                  <span className="font-medium">{menuBatchData?.summary?.total_batches || 0} batch</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Stok Tersedia:</span>
+                  <span className="font-medium">
+                    {menuBatchData?.summary?.stok_tersedia ?? getMenuStock(selectedMenu ?? ({} as Menu))} {menuBatchData?.summary?.satuan?.singkatan || menuBatchData?.summary?.satuan?.nama || "porsi"}
+                  </span>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              {loadingMenuLogs ? (
-                <LoadingScreen message="Memuat riwayat stok..." size="sm" />
-              ) : menuLogs.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground text-sm">Belum ada riwayat stok</div>
+              {loadingMenuBatch ? (
+                <LoadingScreen message="Memuat rincian batch..." size="sm" />
+              ) : !menuBatchData || !menuBatchData.batches || menuBatchData.batches.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">Belum ada data batch</div>
               ) : (
-                <div className="space-y-2">
-                  {menuLogs.map((log) => (
-                    <div key={log.id} className="border rounded-lg p-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-xs text-muted-foreground">{new Date(log.created_at).toLocaleString("id-ID")}</p>
-                          <p className="text-sm font-medium">{log.keterangan || "Perubahan stok"}</p>
+                <div className="space-y-3">
+                  {menuBatchData.batches.map((batch, index) => {
+                    const jumlahAwal = parseFloat(batch.jumlah_awal as any) || 0;
+                    const jumlahSisa = parseFloat(batch.jumlah_sisa as any) || 0;
+                    const jumlahTerpakai = Math.max(0, jumlahAwal - jumlahSisa);
+                    const hargaBeli = batch.harga_beli !== null ? parseFloat(batch.harga_beli as any) : null;
+                    const hargaPerUnit = hargaBeli && jumlahAwal > 0 ? hargaBeli / jumlahAwal : null;
+                    const satuan = menuBatchData?.summary?.satuan?.singkatan || menuBatchData?.summary?.satuan?.nama || "porsi";
+
+                    return (
+                      <div key={batch.id || index} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <p className="font-medium">Batch #{index + 1}</p>
+                            <p className="text-xs text-muted-foreground">Tanggal: {new Date(batch.created_at).toLocaleDateString("id-ID")}</p>
+                          </div>
+                          <Badge variant="outline">
+                            {jumlahSisa.toFixed(0)} {satuan}
+                          </Badge>
                         </div>
-                        <Badge variant={log.tipe === "masuk" ? "success" : "destructive"} className={log.tipe === "masuk" ? "bg-green-500" : "bg-red-500"}>
-                          {log.tipe === "masuk" ? "+" : "-"} {log.tipe}
-                        </Badge>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Jumlah Masuk</p>
+                            <p className="font-medium">
+                              {jumlahAwal.toFixed(0)} {satuan}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Terpakai</p>
+                            <p className="font-medium">
+                              {jumlahTerpakai.toFixed(0)} {satuan}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Harga Batch</p>
+                            <p className="font-medium">{hargaBeli !== null ? `Rp ${hargaBeli.toLocaleString("id-ID")}` : "-"}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Harga/Unit</p>
+                            <p className="font-medium">{hargaPerUnit !== null ? `Rp ${hargaPerUnit.toFixed(0)}` : "-"}</p>
+                          </div>
+                        </div>
+                        {batch.keterangan && (
+                          <div className="mt-3 pt-3 border-t text-xs text-muted-foreground">
+                            <p>
+                              <span className="font-medium">Keterangan:</span> {batch.keterangan}
+                            </p>
+                          </div>
+                        )}
                       </div>
-                      <div className="mt-2 grid grid-cols-2 gap-3 text-xs">
-                        <div>
-                          <span className="text-muted-foreground">Jumlah</span>
-                          <p className="font-medium">
-                            {log.tipe === "masuk" ? "+" : "-"}
-                            {Number(log.jumlah).toFixed(0)}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Stok Akhir</span>
-                          <p className="font-medium">{Number(log.stok_sesudah).toFixed(0)}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>

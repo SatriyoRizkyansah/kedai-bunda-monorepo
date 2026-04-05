@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\MenuResource;
 use App\Models\Menu;
+use App\Models\BatchMenu;
 use App\Models\MenuStokLog;
 use App\Models\KomposisiMenu;
 use Illuminate\Http\Request;
@@ -563,21 +564,13 @@ class MenuController extends Controller
             ], 422);
         }
 
-        $stokSebelum = $menu->stok;
-        $stokSesudah = $stokSebelum + $request->jumlah;
-
-        $menu->update(['stok' => $stokSesudah]);
-
-        $log = MenuStokLog::create([
-            'menu_id' => $menu->id,
-            'user_id' => $request->user()->id,
-            'tipe' => 'masuk',
-            'jumlah' => $request->jumlah,
-            'harga_beli' => $request->harga_beli,
-            'stok_sebelum' => $stokSebelum,
-            'stok_sesudah' => $stokSesudah,
-            'keterangan' => $request->keterangan,
-        ]);
+        $log = $menu->tambahStokMandiri(
+            (float) $request->jumlah,
+            $request->user()->id,
+            $request->keterangan,
+            null,
+            $request->harga_beli !== null ? (float) $request->harga_beli : null
+        );
 
         return response()->json([
             'sukses' => true,
@@ -631,21 +624,14 @@ class MenuController extends Controller
             ], 422);
         }
 
-        $stokSebelum = $menu->stok;
-        $stokSesudah = max(0, $stokSebelum - $request->jumlah);
+        $result = $menu->kurangiStokMandiri(
+            (float) $request->jumlah,
+            $request->user()->id,
+            $request->keterangan,
+            null
+        );
 
-        $menu->update(['stok' => $stokSesudah]);
-
-        $log = MenuStokLog::create([
-            'menu_id' => $menu->id,
-            'user_id' => $request->user()->id,
-            'tipe' => 'keluar',
-            'jumlah' => $request->jumlah,
-            'harga_beli' => $request->harga_beli,
-            'stok_sebelum' => $stokSebelum,
-            'stok_sesudah' => $stokSesudah,
-            'keterangan' => $request->keterangan,
-        ]);
+        $log = $result['log'];
 
         return response()->json([
             'sukses' => true,
@@ -679,6 +665,50 @@ class MenuController extends Controller
         return response()->json([
             'sukses' => true,
             'data' => $logs
+        ]);
+    }
+
+    /**
+     * Get batch tracking untuk menu manual tertentu
+     */
+    public function batchTracking($id)
+    {
+        $menu = Menu::with('satuan')->find($id);
+
+        if (!$menu) {
+            return response()->json([
+                'sukses' => false,
+                'pesan' => 'Menu tidak ditemukan'
+            ], 404);
+        }
+
+        if (!$menu->kelola_stok_mandiri) {
+            return response()->json([
+                'sukses' => false,
+                'pesan' => 'Menu ini tidak menggunakan stok manual'
+            ], 422);
+        }
+
+        $batches = BatchMenu::where('menu_id', $id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $activeBatches = $batches->filter(function ($batch) {
+            return $batch->jumlah_sisa > 0;
+        });
+
+        return response()->json([
+            'sukses' => true,
+            'data' => [
+                'menu' => new MenuResource($menu),
+                'batches' => $batches,
+                'summary' => [
+                    'total_batches' => $batches->count(),
+                    'active_batches' => $activeBatches->count(),
+                    'stok_tersedia' => (float) $menu->stok,
+                    'satuan' => $menu->satuan,
+                ]
+            ]
         ]);
     }
 
