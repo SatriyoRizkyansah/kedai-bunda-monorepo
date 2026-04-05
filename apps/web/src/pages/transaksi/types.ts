@@ -8,4 +8,6 @@ export interface CartItem {
 
 export type MetodePembayaran = "tunai" | "qris";
 
+export type TipeTransaksi = "umum" | "jatah_karyawan";
+
 export type { Menu, TransaksiType };

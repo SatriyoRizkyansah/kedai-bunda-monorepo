@@ -14,6 +14,8 @@ export function TransaksiDetailDialog({ open, selectedTransaksi, onOpenChange }:
   if (!selectedTransaksi) return null;
 
   const items = selectedTransaksi.detail || [];
+  const tipeLabel = selectedTransaksi.tipe_transaksi === "jatah_karyawan" ? "Jatah Karyawan" : "Umum";
+  const metodeLabel = selectedTransaksi.tipe_transaksi === "jatah_karyawan" ? "Tanpa pembayaran" : selectedTransaksi.metode_pembayaran;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -31,7 +33,11 @@ export function TransaksiDetailDialog({ open, selectedTransaksi, onOpenChange }:
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Metode</p>
-              <p className="font-semibold capitalize">{selectedTransaksi.metode_pembayaran}</p>
+              <p className="font-semibold capitalize">{metodeLabel}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Tipe</p>
+              <p className="font-semibold">{tipeLabel}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Tanggal</p>

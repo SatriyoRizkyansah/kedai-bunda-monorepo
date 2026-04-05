@@ -30,6 +30,7 @@ class TransaksiResource extends JsonResource
             'bayar' => (float) $this->bayar,
             'kembalian' => (float) $this->kembalian,
             'metode_pembayaran' => $this->metode_pembayaran ?? 'tunai',
+            'tipe_transaksi' => $this->tipe_transaksi ?? 'umum',
             'status' => $this->status,
             'catatan' => $this->catatan,
             'detail' => DetailTransaksiResource::collection($this->whenLoaded('detailTransaksi')),

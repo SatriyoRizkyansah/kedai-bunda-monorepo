@@ -13,7 +13,7 @@ import { POSTab } from "@/pages/transaksi/POSTab";
 import { RiwayatTab } from "@/pages/transaksi/RiwayatTab";
 import { MobileCartDialog } from "@/pages/transaksi/MobileCartDialog";
 import { TransaksiDetailDialog } from "@/pages/transaksi/TransaksiDetailDialog";
-import type { CartItem, MetodePembayaran } from "@/pages/transaksi/types";
+import type { CartItem, MetodePembayaran, TipeTransaksi } from "@/pages/transaksi/types";
 import { filterMenu, filterTransaksi, calculateTotal, getCartItemCount, getMenuStockValue, formatStockValue } from "@/pages/transaksi/utils";
 import { playTransactionSound } from "@/lib/sound";
 
@@ -30,6 +30,7 @@ export function TransaksiPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [bayar, setBayar] = useState("");
   const [metodePembayaran, setMetodePembayaran] = useState<MetodePembayaran>("tunai");
+  const [tipeTransaksi, setTipeTransaksi] = useState<TipeTransaksi>("umum");
   const [namaPelanggan, setNamaPelanggan] = useState("");
 
   // Riwayat State
@@ -129,6 +130,17 @@ export function TransaksiPage() {
     setBayar("");
     setNamaPelanggan("");
     setMetodePembayaran("tunai");
+    setTipeTransaksi("umum");
+  };
+
+  const handleTipeChange = (value: TipeTransaksi) => {
+    setTipeTransaksi(value);
+    if (value === "jatah_karyawan") {
+      setMetodePembayaran("tunai");
+      setBayar("0");
+    } else {
+      setBayar("");
+    }
   };
 
   // Handle submit
@@ -140,8 +152,9 @@ export function TransaksiPage() {
 
     const total = calculateTotal(cart);
     const bayarNum = parseFloat(bayar);
+    const isJatahKaryawan = tipeTransaksi === "jatah_karyawan";
 
-    if (metodePembayaran === "tunai" && (!bayarNum || bayarNum < total)) {
+    if (!isJatahKaryawan && metodePembayaran === "tunai" && (!bayarNum || bayarNum < total)) {
       notify.warning("Pembayaran kurang!");
       return;
     }
@@ -153,8 +166,9 @@ export function TransaksiPage() {
 
       await api.post("/transaksi", {
         user_id: user?.id || 1,
-        bayar: metodePembayaran === "tunai" ? bayarNum : total,
-        metode_pembayaran: metodePembayaran,
+        bayar: isJatahKaryawan ? 0 : metodePembayaran === "tunai" ? bayarNum : total,
+        metode_pembayaran: isJatahKaryawan ? "tunai" : metodePembayaran,
+        tipe_transaksi: tipeTransaksi,
         nama_pelanggan: namaPelanggan || null,
         items: cart.map((item) => ({ menu_id: item.menu_id, jumlah: item.jumlah })),
       });
@@ -197,7 +211,7 @@ export function TransaksiPage() {
   const kategoris = [...new Set(menuList.map((m) => m.kategori))].sort();
 
   const today = new Date().toISOString().split("T")[0];
-  const transaksiHariIni = transaksi.filter((t) => t.tanggal?.startsWith(today));
+  const transaksiHariIni = transaksi.filter((t) => t.tanggal?.startsWith(today) && t.tipe_transaksi !== "jatah_karyawan");
   const totalHariIni = transaksiHariIni.filter((t) => t.status === "selesai").reduce((sum, t) => sum + Number(t.total), 0);
 
   const cartItemCount = getCartItemCount(cart);
@@ -240,6 +254,7 @@ export function TransaksiPage() {
                 kategoris={kategoris}
                 bayar={bayar}
                 metodePembayaran={metodePembayaran}
+                tipeTransaksi={tipeTransaksi}
                 namaPelanggan={namaPelanggan}
                 onSearchChange={setSearchTerm}
                 onKategoriChange={setSelectedKategori}
@@ -249,6 +264,7 @@ export function TransaksiPage() {
                 onClearCart={clearCart}
                 onBayarChange={setBayar}
                 onMetodeChange={setMetodePembayaran}
+                onTipeChange={handleTipeChange}
                 onNamaChange={setNamaPelanggan}
                 onSubmit={handleSubmit}
                 isLoading={submitting}
@@ -334,12 +350,14 @@ export function TransaksiPage() {
           cart={cart}
           bayar={bayar}
           metodePembayaran={metodePembayaran}
+          tipeTransaksi={tipeTransaksi}
           namaPelanggan={namaPelanggan}
           onUpdateQuantity={updateQuantity}
           onRemoveFromCart={removeFromCart}
           onClearCart={clearCart}
           onBayarChange={setBayar}
           onMetodeChange={setMetodePembayaran}
+          onTipeChange={handleTipeChange}
           onNamaChange={setNamaPelanggan}
           onSubmit={handleSubmit}
           onOpenChange={setShowMobileCart}

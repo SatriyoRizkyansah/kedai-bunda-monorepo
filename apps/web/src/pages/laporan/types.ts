@@ -9,6 +9,8 @@ export interface PeriodDate {
 // Laporan Penjualan Types
 export interface RingkasanPenjualan {
   total_transaksi: number;
+  total_transaksi_umum?: number;
+  total_transaksi_jatah?: number;
   total_pendapatan: number;
   total_bayar: number;
   total_kembalian: number;
@@ -36,7 +38,9 @@ export interface LaporanPenjualan {
   periode: PeriodDate;
   ringkasan: RingkasanPenjualan;
   per_kategori: PenjualanPerKategori[];
+  per_kategori_jatah?: PenjualanPerKategori[];
   detail_menu: DetailMenuPenjualan[];
+  detail_menu_jatah?: DetailMenuPenjualan[];
   transaksi: unknown[];
 }
 
@@ -83,6 +87,8 @@ export interface LaporanStokLog {
 // Laporan Keuntungan Types
 export interface RingkasanKeuntungan {
   total_transaksi: number;
+  total_transaksi_umum?: number;
+  total_transaksi_jatah?: number;
   total_pendapatan: number;
   total_hpp: number;
   laba_kotor: number;

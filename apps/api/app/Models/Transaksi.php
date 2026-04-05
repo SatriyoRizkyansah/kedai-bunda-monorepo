@@ -18,6 +18,7 @@ class Transaksi extends Model
         'bayar',
         'kembalian',
         'metode_pembayaran',
+        'tipe_transaksi',
         'status',
         'catatan',
     ];

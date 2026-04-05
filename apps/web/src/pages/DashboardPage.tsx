@@ -58,17 +58,18 @@ export function DashboardPage() {
       const bahanBaku: BahanBaku[] = data["bahan-baku"] || [];
       const menu: Menu[] = data["menu"] || [];
       const transaksi: Transaksi[] = data["transaksi"] || [];
+      const transaksiPenjualan = transaksi.filter((t) => t.tipe_transaksi !== "jatah_karyawan");
 
       // Hitung transaksi hari ini
       const today = new Date().toISOString().split("T")[0];
-      const transaksiHariIni = transaksi.filter((t) => t.tanggal && t.tanggal.startsWith(today));
+      const transaksiHariIni = transaksiPenjualan.filter((t) => t.tanggal && t.tanggal.startsWith(today));
       const pendapatanHariIni = transaksiHariIni.filter((t) => t.status === "selesai").reduce((sum, t) => sum + Number(t.total || 0), 0);
 
       // Hitung pendapatan kemarin
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayStr = yesterday.toISOString().split("T")[0];
-      const transaksiKemarin = transaksi.filter((t) => t.tanggal && t.tanggal.startsWith(yesterdayStr));
+      const transaksiKemarin = transaksiPenjualan.filter((t) => t.tanggal && t.tanggal.startsWith(yesterdayStr));
       const pendapatanKemarin = transaksiKemarin.filter((t) => t.status === "selesai").reduce((sum, t) => sum + Number(t.total || 0), 0);
 
       // Bahan stok menipis
@@ -76,7 +77,7 @@ export function DashboardPage() {
 
       // Hitung penjualan per kategori dari transaksi selesai
       const kategoriMap = new Map<string, number>();
-      transaksi
+      transaksiPenjualan
         .filter((t) => t.status === "selesai")
         .forEach((t) => {
           t.detail?.forEach((d: DetailTransaksi) => {
@@ -92,7 +93,7 @@ export function DashboardPage() {
 
       // Hitung menu terlaris
       const menuSalesMap = new Map<string, { terjual: number; pendapatan: number }>();
-      transaksi
+      transaksiPenjualan
         .filter((t) => t.status === "selesai")
         .forEach((t) => {
           t.detail?.forEach((d: DetailTransaksi) => {
@@ -118,7 +119,7 @@ export function DashboardPage() {
         date.setDate(date.getDate() - i);
         const dateStr = date.toISOString().split("T")[0];
         const hari = hariNama[date.getDay()];
-        const pendapatan = transaksi.filter((t) => t.tanggal?.startsWith(dateStr) && t.status === "selesai").reduce((sum, t) => sum + Number(t.total || 0), 0);
+        const pendapatan = transaksiPenjualan.filter((t) => t.tanggal?.startsWith(dateStr) && t.status === "selesai").reduce((sum, t) => sum + Number(t.total || 0), 0);
         grafikPendapatan.push({ tanggal: dateStr, hari, pendapatan });
       }
 

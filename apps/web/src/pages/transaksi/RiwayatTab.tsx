@@ -42,6 +42,7 @@ export function RiwayatTab({ transaksi, loading, searchQuery, selectedStatus, on
                 <TableHead>Pelanggan</TableHead>
                 <TableHead>Total</TableHead>
                 <TableHead>Metode</TableHead>
+                <TableHead>Tipe</TableHead>
                 <TableHead>Tanggal</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Aksi</TableHead>
@@ -50,7 +51,7 @@ export function RiwayatTab({ transaksi, loading, searchQuery, selectedStatus, on
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
+                  <TableCell colSpan={8} className="text-center py-8">
                     Memuat...
                   </TableCell>
                 </TableRow>
@@ -60,7 +61,8 @@ export function RiwayatTab({ transaksi, loading, searchQuery, selectedStatus, on
                     <TableCell className="font-mono font-semibold">{item.kode_transaksi}</TableCell>
                     <TableCell>{item.nama_pelanggan || "Guest"}</TableCell>
                     <TableCell className="font-semibold">{formatCurrency(item.total || 0)}</TableCell>
-                    <TableCell className="capitalize">{item.metode_pembayaran}</TableCell>
+                    <TableCell className="capitalize">{item.tipe_transaksi === "jatah_karyawan" ? "Tanpa bayar" : item.metode_pembayaran}</TableCell>
+                    <TableCell className="text-xs font-semibold">{item.tipe_transaksi === "jatah_karyawan" ? "Jatah Karyawan" : "Umum"}</TableCell>
                     <TableCell className="text-sm">{formatDateTime(item.created_at)}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(item.status)}`}>{item.status === "selesai" ? "Selesai" : "Batal"}</span>
@@ -81,7 +83,7 @@ export function RiwayatTab({ transaksi, loading, searchQuery, selectedStatus, on
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
+                  <TableCell colSpan={8} className="text-center py-8">
                     Belum ada transaksi
                   </TableCell>
                 </TableRow>

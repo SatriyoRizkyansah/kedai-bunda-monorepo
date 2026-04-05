@@ -16,6 +16,9 @@ interface KeuntunganTabProps {
 }
 
 export function KeuntunganTab({ loading, laporan, period, showExport = true }: KeuntunganTabProps) {
+  const totalUmum = laporan?.ringkasan.total_transaksi_umum;
+  const totalJatah = laporan?.ringkasan.total_transaksi_jatah;
+  const showTipeBreakdown = totalUmum !== undefined || totalJatah !== undefined;
   const handleExport = () => {
     if (laporan) {
       exportKeuntunganToExcel(laporan, period);
@@ -48,12 +51,19 @@ export function KeuntunganTab({ loading, laporan, period, showExport = true }: K
         </div>
       )}
 
+      {showTipeBreakdown && (
+        <div className="text-xs text-muted-foreground">
+          Transaksi Umum: {formatNumber(totalUmum ?? 0)} • Jatah Karyawan: {formatNumber(totalJatah ?? 0)} (pendapatan 0, HPP tetap dihitung)
+        </div>
+      )}
+
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
         <Card>
           <CardContent className="pt-5 sm:pt-6">
             <p className="text-xs sm:text-sm text-muted-foreground">Total Pendapatan</p>
             <p className="text-lg sm:text-xl font-bold text-foreground">{formatCurrency(laporan.ringkasan.total_pendapatan)}</p>
+            <p className="text-[11px] text-muted-foreground mt-1">Hanya transaksi umum</p>
           </CardContent>
         </Card>
         <Card>

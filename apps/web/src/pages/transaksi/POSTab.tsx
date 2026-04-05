@@ -1,4 +1,4 @@
-import type { CartItem, MetodePembayaran } from "./types";
+import type { CartItem, MetodePembayaran, TipeTransaksi } from "./types";
 import { MenuGrid } from "./MenuGrid";
 import { CartPanel } from "./CartPanel";
 import type { Menu } from "@/lib/types";
@@ -11,6 +11,7 @@ interface POSTabProps {
   kategoris: string[];
   bayar: string;
   metodePembayaran: MetodePembayaran;
+  tipeTransaksi: TipeTransaksi;
   namaPelanggan: string;
   onSearchChange: (value: string) => void;
   onKategoriChange: (kategori: string) => void;
@@ -20,6 +21,7 @@ interface POSTabProps {
   onClearCart: () => void;
   onBayarChange: (value: string) => void;
   onMetodeChange: (value: MetodePembayaran) => void;
+  onTipeChange: (value: TipeTransaksi) => void;
   onNamaChange: (value: string) => void;
   onSubmit: () => void;
   isLoading?: boolean;
@@ -33,6 +35,7 @@ export function POSTab({
   kategoris,
   bayar,
   metodePembayaran,
+  tipeTransaksi,
   namaPelanggan,
   onSearchChange,
   onKategoriChange,
@@ -42,6 +45,7 @@ export function POSTab({
   onClearCart,
   onBayarChange,
   onMetodeChange,
+  onTipeChange,
   onNamaChange,
   onSubmit,
   isLoading = false,
@@ -60,12 +64,14 @@ export function POSTab({
             cart={cart}
             bayar={bayar}
             metodePembayaran={metodePembayaran}
+            tipeTransaksi={tipeTransaksi}
             namaPelanggan={namaPelanggan}
             onUpdateQuantity={onUpdateQuantity}
             onRemoveFromCart={onRemoveFromCart}
             onClearCart={onClearCart}
             onBayarChange={onBayarChange}
             onMetodeChange={onMetodeChange}
+            onTipeChange={onTipeChange}
             onNamaChange={onNamaChange}
             onSubmit={onSubmit}
             isLoading={isLoading}

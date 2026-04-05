@@ -9,12 +9,14 @@ interface CartPanelProps {
   cart: CartItem[];
   bayar: string;
   metodePembayaran: MetodePembayaran;
+  tipeTransaksi: "umum" | "jatah_karyawan";
   namaPelanggan: string;
   onUpdateQuantity: (menuId: number, delta: number) => void;
   onRemoveFromCart: (menuId: number) => void;
   onClearCart: () => void;
   onBayarChange: (value: string) => void;
   onMetodeChange: (value: MetodePembayaran) => void;
+  onTipeChange: (value: "umum" | "jatah_karyawan") => void;
   onNamaChange: (value: string) => void;
   onSubmit: () => void;
   isLoading?: boolean;
@@ -28,10 +30,26 @@ const NUMPAD_KEYS = [
   ["C", "Uang Pas"],
 ];
 
-export function CartPanel({ cart, bayar, metodePembayaran, namaPelanggan, onUpdateQuantity, onRemoveFromCart, onClearCart, onBayarChange, onMetodeChange, onNamaChange, onSubmit, isLoading = false }: CartPanelProps) {
+export function CartPanel({
+  cart,
+  bayar,
+  metodePembayaran,
+  tipeTransaksi,
+  namaPelanggan,
+  onUpdateQuantity,
+  onRemoveFromCart,
+  onClearCart,
+  onBayarChange,
+  onMetodeChange,
+  onTipeChange,
+  onNamaChange,
+  onSubmit,
+  isLoading = false,
+}: CartPanelProps) {
   const total = calculateTotal(cart);
   const kembalian = calculateKembalian(cart, bayar);
-  const isReadyToPay = cart.length > 0 && (metodePembayaran !== "tunai" || bayar === "Uang Pas" || kembalian >= 0);
+  const isJatahKaryawan = tipeTransaksi === "jatah_karyawan";
+  const isReadyToPay = cart.length > 0 && (isJatahKaryawan || metodePembayaran !== "tunai" || bayar === "Uang Pas" || kembalian >= 0);
 
   const handleNumpadKeyClick = (key: string) => {
     if (key === "Uang Pas") {
@@ -83,7 +101,7 @@ export function CartPanel({ cart, bayar, metodePembayaran, namaPelanggan, onUpda
             <span className="text-primary">{formatCurrency(total)}</span>
           </div>
 
-          {metodePembayaran === "tunai" && bayar !== "Uang Pas" && bayar && (
+          {!isJatahKaryawan && metodePembayaran === "tunai" && bayar !== "Uang Pas" && bayar && (
             <>
               <div className="flex justify-between text-sm">
                 <span>Uang Pembeli:</span>
@@ -97,24 +115,38 @@ export function CartPanel({ cart, bayar, metodePembayaran, namaPelanggan, onUpda
           )}
         </Card>
 
-        {/* Payment Method */}
+        {/* Transaction Type */}
         <div>
-          <label className="text-sm font-medium">Metode Pembayaran</label>
-          <select
-            value={metodePembayaran}
-            onChange={(e) => {
-              onMetodeChange(e.target.value as MetodePembayaran);
-              onBayarChange("");
-            }}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1"
-          >
-            <option value="tunai">Tunai</option>
-            <option value="qris">QRIS</option>
+          <label className="text-sm font-medium">Tipe Transaksi</label>
+          <select value={tipeTransaksi} onChange={(e) => onTipeChange(e.target.value as "umum" | "jatah_karyawan")} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1">
+            <option value="umum">Umum (Penjualan)</option>
+            <option value="jatah_karyawan">Jatah Karyawan</option>
           </select>
+          {isJatahKaryawan && <p className="text-xs text-muted-foreground mt-1">Pembayaran tidak diperlukan dan tidak dihitung sebagai profit.</p>}
         </div>
 
+        {/* Payment Method */}
+        {!isJatahKaryawan ? (
+          <div>
+            <label className="text-sm font-medium">Metode Pembayaran</label>
+            <select
+              value={metodePembayaran}
+              onChange={(e) => {
+                onMetodeChange(e.target.value as MetodePembayaran);
+                onBayarChange("");
+              }}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1"
+            >
+              <option value="tunai">Tunai</option>
+              <option value="qris">QRIS</option>
+            </select>
+          </div>
+        ) : (
+          <div className="rounded-md border border-dashed border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">Pembayaran otomatis diset ke Rp 0 untuk konsumsi karyawan.</div>
+        )}
+
         {/* Numpad (only for cash) */}
-        {metodePembayaran === "tunai" && (
+        {!isJatahKaryawan && metodePembayaran === "tunai" && (
           <div className="space-y-2">
             <Input value={bayar === "Uang Pas" ? formatCurrency(total) : bayar} onChange={(e) => onBayarChange(e.target.value)} placeholder="Masukkan uang..." className="text-lg text-center font-mono" readOnly />
 

@@ -83,6 +83,7 @@ export interface Transaksi {
   nama_pelanggan?: string;
   total: number;
   metode_pembayaran: "tunai" | "qris" | "transfer";
+  tipe_transaksi?: "umum" | "jatah_karyawan";
   status: "selesai" | "batal";
   user_id: number;
   user?: User;

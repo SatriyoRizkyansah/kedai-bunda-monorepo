@@ -7,15 +7,25 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { notify } from "@/lib/notify";
 import api from "@/lib/api";
-import type { BahanBaku, KonversiBahan, Satuan } from "@/lib/types";
+import type { BahanBaku, KonversiBahan, Menu, Satuan } from "@/lib/types";
+import { MenuDialog } from "../menu/MenuDialog";
+import { StokMenuDialog } from "../menu/StokMenuDialog";
+import { HistoriStokDialog } from "../menu/HistoriStokDialog";
+import { DeleteConfirmDialog } from "../menu/DeleteConfirmDialog";
+import { INITIAL_FORM_DATA, INITIAL_STOK_FORM } from "../menu/utils";
+import type { MenuFormData, StokFormData, StokLog } from "../menu/types";
 
 export function BahanBakuTab() {
   const [bahanBaku, setBahanBaku] = useState<BahanBaku[]>([]);
+  const [menuManual, setMenuManual] = useState<Menu[]>([]);
   const [satuanList, setSatuanList] = useState<Satuan[]>([]);
   const [_konversiList, setKonversiList] = useState<KonversiBahan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMenuManual, setLoadingMenuManual] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [menuSearchTerm, setMenuSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<BahanBaku | null>(null);
   const [userRole, setUserRole] = useState<string>("");
@@ -51,8 +61,28 @@ export function BahanBakuTab() {
   const [konversiSuggestions, setKonversiSuggestions] = useState<any[]>([]);
   const [activeKonversi, setActiveKonversi] = useState<any>(null); // Template konversi yang dipilih untuk stok input
 
+  const [menuDialogOpen, setMenuDialogOpen] = useState(false);
+  const [menuEditingItem, setMenuEditingItem] = useState<Menu | null>(null);
+  const [menuFormData, setMenuFormData] = useState<MenuFormData>(INITIAL_FORM_DATA);
+  const [menuFormLoading, setMenuFormLoading] = useState(false);
+
+  const [menuStokDialogOpen, setMenuStokDialogOpen] = useState(false);
+  const [menuStokItem, setMenuStokItem] = useState<Menu | null>(null);
+  const [menuStokFormData, setMenuStokFormData] = useState<StokFormData>(INITIAL_STOK_FORM);
+  const [menuStokLoading, setMenuStokLoading] = useState(false);
+
+  const [menuHistoriDialogOpen, setMenuHistoriDialogOpen] = useState(false);
+  const [menuHistoriItem, setMenuHistoriItem] = useState<Menu | null>(null);
+  const [menuStokLogs, setMenuStokLogs] = useState<StokLog[]>([]);
+  const [menuLoadingLogs, setMenuLoadingLogs] = useState(false);
+
+  const [menuConfirmOpen, setMenuConfirmOpen] = useState(false);
+  const [menuConfirmTargetId, setMenuConfirmTargetId] = useState<number | null>(null);
+  const [menuDeleteLoading, setMenuDeleteLoading] = useState(false);
+
   useEffect(() => {
     fetchBahanBaku();
+    fetchMenuManual();
     fetchSatuan();
     fetchKonversi();
   }, []);
@@ -88,6 +118,20 @@ export function BahanBakuTab() {
     }
   };
 
+  const fetchMenuManual = async () => {
+    setLoadingMenuManual(true);
+    try {
+      const response = await api.get("/menu");
+      const data = response.data.data || [];
+      setMenuManual(data.filter((item: Menu) => item.kelola_stok_mandiri));
+    } catch (error) {
+      console.error("Error fetching menu manual:", error);
+      setMenuManual([]);
+    } finally {
+      setLoadingMenuManual(false);
+    }
+  };
+
   const fetchSatuan = async () => {
     try {
       const response = await api.get("/satuan");
@@ -107,7 +151,152 @@ export function BahanBakuTab() {
   };
 
   const filteredBahanBaku = bahanBaku.filter((item) => item.nama.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredMenuManual = menuManual.filter((item) => item.nama.toLowerCase().includes(menuSearchTerm.toLowerCase()));
   const isLowStock = (item: BahanBaku) => Number(item.stok_tersedia || 0) < 10;
+  const getMenuStock = (item: Menu) => {
+    const rawValue = item.stok_sisa ?? item.stok ?? 0;
+    const parsed = Number(rawValue ?? 0);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  };
+  const isMenuLowStock = (item: Menu) => getMenuStock(item) < 5;
+
+  const handleOpenMenuDialog = (item?: Menu) => {
+    if (item) {
+      setMenuEditingItem(item);
+      setMenuFormData({
+        nama: item.nama,
+        kategori: item.kategori,
+        harga: (item.harga_jual || item.harga || 0).toString(),
+        deskripsi: item.deskripsi || "",
+        tersedia: item.tersedia,
+        stok: (item.stok || 0).toString(),
+        kelola_stok_mandiri: item.kelola_stok_mandiri ?? true,
+        gambar: null,
+        gambar_preview: item.gambar || "",
+      });
+    } else {
+      setMenuEditingItem(null);
+      setMenuFormData(INITIAL_FORM_DATA);
+    }
+    setMenuDialogOpen(true);
+  };
+
+  const handleCloseMenuDialog = () => {
+    setMenuDialogOpen(false);
+    setMenuEditingItem(null);
+    setMenuFormData(INITIAL_FORM_DATA);
+  };
+
+  const handleMenuSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMenuFormLoading(true);
+
+    const formDataToSend = new FormData();
+    formDataToSend.append("nama", menuFormData.nama);
+    formDataToSend.append("kategori", menuFormData.kategori);
+    formDataToSend.append("harga_jual", parseFloat(menuFormData.harga).toString());
+    formDataToSend.append("deskripsi", menuFormData.deskripsi);
+    formDataToSend.append("tersedia", menuFormData.tersedia.toString());
+    formDataToSend.append("stok", parseFloat(menuFormData.stok).toString());
+    formDataToSend.append("kelola_stok_mandiri", menuFormData.kelola_stok_mandiri.toString());
+
+    if (menuFormData.gambar instanceof File) {
+      formDataToSend.append("gambar", menuFormData.gambar);
+    }
+
+    try {
+      if (menuEditingItem) {
+        await api.post(`/menu/${menuEditingItem.id}?_method=PUT`, formDataToSend);
+      } else {
+        await api.post("/menu", formDataToSend);
+      }
+      notify.success(menuEditingItem ? "Menu berhasil diupdate" : "Menu berhasil ditambahkan");
+      handleCloseMenuDialog();
+      fetchMenuManual();
+    } catch (error: any) {
+      console.error("Error saving menu:", error);
+      const errorMsg = error?.response?.data?.errors || error?.response?.data?.pesan || "Gagal menyimpan menu";
+      notify.error(typeof errorMsg === "object" ? JSON.stringify(errorMsg) : errorMsg);
+    } finally {
+      setMenuFormLoading(false);
+    }
+  };
+
+  const handleOpenMenuStokDialog = (item: Menu) => {
+    if (!item.kelola_stok_mandiri) return;
+    setMenuStokItem(item);
+    setMenuStokFormData(INITIAL_STOK_FORM);
+    setMenuStokDialogOpen(true);
+  };
+
+  const handleTambahMenuStok = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!menuStokItem) return;
+
+    setMenuStokLoading(true);
+    try {
+      const payload: any = {
+        jumlah: parseFloat(menuStokFormData.jumlah),
+        keterangan: menuStokFormData.keterangan || `Penambahan stok ${menuStokItem.nama}`,
+      };
+
+      if (menuStokFormData.harga_beli) {
+        payload.harga_beli = parseFloat(menuStokFormData.harga_beli);
+      }
+
+      await api.post(`/menu/${menuStokItem.id}/tambah-stok`, payload);
+      setMenuStokDialogOpen(false);
+      setMenuStokItem(null);
+      setMenuStokFormData(INITIAL_STOK_FORM);
+      fetchMenuManual();
+      notify.success("Stok menu berhasil ditambahkan");
+    } catch (error: any) {
+      console.error("Error tambah stok menu:", error);
+      notify.error(error?.response?.data?.pesan || "Gagal menambah stok menu");
+    } finally {
+      setMenuStokLoading(false);
+    }
+  };
+
+  const handleOpenMenuHistori = async (item: Menu) => {
+    setMenuHistoriItem(item);
+    setMenuLoadingLogs(true);
+    setMenuHistoriDialogOpen(true);
+
+    try {
+      const response = await api.get(`/menu/${item.id}/stok-log`);
+      setMenuStokLogs(response.data.data?.data || []);
+    } catch (error) {
+      console.error("Error fetching menu logs:", error);
+      setMenuStokLogs([]);
+      notify.error("Gagal memuat riwayat stok menu");
+    } finally {
+      setMenuLoadingLogs(false);
+    }
+  };
+
+  const handleDeleteMenu = (id: number) => {
+    setMenuConfirmTargetId(id);
+    setMenuConfirmOpen(true);
+  };
+
+  const performDeleteMenu = async () => {
+    if (!menuConfirmTargetId) return;
+
+    setMenuDeleteLoading(true);
+    try {
+      await api.delete(`/menu/${menuConfirmTargetId}`);
+      setMenuConfirmOpen(false);
+      setMenuConfirmTargetId(null);
+      fetchMenuManual();
+      notify.success("Menu berhasil dihapus");
+    } catch (error: any) {
+      console.error("Error deleting menu:", error);
+      notify.error(error?.response?.data?.pesan || "Gagal menghapus menu");
+    } finally {
+      setMenuDeleteLoading(false);
+    }
+  };
 
   const loadKonversiSuggestions = async (bahanId: number) => {
     try {
@@ -292,6 +481,10 @@ export function BahanBakuTab() {
 
   return (
     <div className="space-y-4">
+      <div>
+        <h3 className="text-base sm:text-lg font-semibold text-foreground">Stok Bahan Baku</h3>
+        <p className="text-xs sm:text-sm text-muted-foreground">Pantau stok bahan baku dan status ketersediaannya</p>
+      </div>
       <div className="flex flex-col sm:flex-row justify-between gap-4">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -425,6 +618,170 @@ export function BahanBakuTab() {
                                     <Pencil className="h-4 w-4" />
                                   </Button>
                                   <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10" title="Hapus" onClick={() => handleDelete(item.id)}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 pt-2">
+        <div>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground">Stok Menu Manual</h3>
+          <p className="text-xs sm:text-sm text-muted-foreground">Menu dengan stok yang dikelola manual</p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <div className="relative w-full sm:max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Cari menu manual..." value={menuSearchTerm} onChange={(e) => setMenuSearchTerm(e.target.value)} className="pl-10" />
+          </div>
+          {isAdmin && (
+            <Button onClick={() => handleOpenMenuDialog()} className="gap-2 w-full sm:w-auto">
+              <Plus className="h-4 w-4" />
+              Tambah Menu Manual
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          {loadingMenuManual ? (
+            <LoadingScreen message="Memuat stok menu manual..." size="md" />
+          ) : filteredMenuManual.length === 0 ? (
+            <div className="text-center py-12">
+              <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">{menuSearchTerm ? "Tidak ada hasil pencarian" : "Belum ada menu stok manual"}</p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-3 p-4 sm:hidden">
+                {filteredMenuManual.map((item) => {
+                  const stockValue = getMenuStock(item);
+                  const lowStock = isMenuLowStock(item);
+                  const satuanLabel = item.satuan?.nama || "porsi";
+
+                  return (
+                    <div key={item.id} className="rounded-lg border border-border bg-background p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-sm text-foreground truncate">{item.nama}</p>
+                          <p className="text-xs text-muted-foreground capitalize">{item.kategori}</p>
+                          <p className={`mt-1 text-sm font-semibold ${lowStock ? "text-destructive" : "text-foreground"}`}>
+                            {Math.floor(stockValue)} {satuanLabel}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          <Badge variant="outline" className="text-[10px]">
+                            Manual
+                          </Badge>
+                          {lowStock ? (
+                            <Badge variant="destructive" className="gap-1 text-[10px]">
+                              <AlertCircle className="h-3 w-3" />
+                              Menipis
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-green-500 text-white hover:bg-green-600 text-[10px]">Aman</Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+                        <span>{item.tersedia ? "Tersedia" : "Habis"}</span>
+                        <span>Stok manual</span>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2 justify-end">
+                        {isAdmin && (
+                          <Button onClick={() => handleOpenMenuStokDialog(item)} variant="outline" size="sm" className="h-8 w-8 p-0" title="Tambah Stok">
+                            <PackagePlus className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button onClick={() => handleOpenMenuHistori(item)} variant="outline" size="sm" className="h-8 w-8 p-0" title="Riwayat Stok">
+                          <History className="h-4 w-4" />
+                        </Button>
+                        {isAdmin && (
+                          <>
+                            <Button onClick={() => handleOpenMenuDialog(item)} variant="outline" size="sm" className="h-8 w-8 p-0" title="Edit">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button variant="outline" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive" title="Hapus" onClick={() => handleDeleteMenu(item.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="hidden w-full overflow-x-auto sm:block">
+                <Table className="min-w-[640px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Menu</TableHead>
+                      <TableHead className="text-center">Stok</TableHead>
+                      <TableHead className="text-center">Status</TableHead>
+                      {/* <TableHead className="text-center">Tipe</TableHead> */}
+                      <TableHead className="text-center">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredMenuManual.map((item) => {
+                      const stockValue = getMenuStock(item);
+                      const lowStock = isMenuLowStock(item);
+                      const satuanLabel = item.satuan?.nama || "porsi";
+
+                      return (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-medium">
+                            <div className="min-w-0">
+                              <p className="truncate">{item.nama}</p>
+                              <p className="text-xs text-muted-foreground capitalize">{item.kategori}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className={`font-semibold ${lowStock ? "text-destructive" : "text-foreground"}`}>
+                              {Math.floor(stockValue)} {satuanLabel}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {lowStock ? (
+                              <Badge variant="destructive" className="gap-1">
+                                <AlertCircle className="h-3 w-3" />
+                                Menipis
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-green-500 text-white hover:bg-green-600">Aman</Badge>
+                            )}
+                          </TableCell>
+                          {/* <TableCell className="text-center">
+                            <Badge variant="outline">Manual</Badge>
+                          </TableCell> */}
+                          <TableCell>
+                            <div className="flex justify-center gap-1">
+                              {isAdmin && (
+                                <Button onClick={() => handleOpenMenuStokDialog(item)} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-green-500/10 hover:text-green-600" title="Tambah Stok">
+                                  <PackagePlus className="h-4 w-4" />
+                                </Button>
+                              )}
+                              <Button onClick={() => handleOpenMenuHistori(item)} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-blue-500/10 hover:text-blue-600" title="Riwayat Stok">
+                                <History className="h-4 w-4" />
+                              </Button>
+                              {isAdmin && (
+                                <>
+                                  <Button onClick={() => handleOpenMenuDialog(item)} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary" title="Edit">
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10" title="Hapus" onClick={() => handleDeleteMenu(item.id)}>
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
                                 </>
@@ -750,6 +1107,28 @@ export function BahanBakuTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <MenuDialog
+        open={menuDialogOpen}
+        editingItem={menuEditingItem}
+        formData={menuFormData}
+        onFormDataChange={setMenuFormData}
+        onSubmit={handleMenuSubmit}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleCloseMenuDialog();
+          } else {
+            setMenuDialogOpen(true);
+          }
+        }}
+        isLoading={menuFormLoading}
+      />
+
+      <StokMenuDialog open={menuStokDialogOpen} stokItem={menuStokItem} formData={menuStokFormData} onFormDataChange={setMenuStokFormData} onSubmit={handleTambahMenuStok} onOpenChange={setMenuStokDialogOpen} isLoading={menuStokLoading} />
+
+      <HistoriStokDialog open={menuHistoriDialogOpen} historiItem={menuHistoriItem} stokLogs={menuStokLogs} loading={menuLoadingLogs} onOpenChange={setMenuHistoriDialogOpen} />
+
+      <DeleteConfirmDialog open={menuConfirmOpen} onOpenChange={setMenuConfirmOpen} onConfirm={performDeleteMenu} isLoading={menuDeleteLoading} />
     </div>
   );
 }

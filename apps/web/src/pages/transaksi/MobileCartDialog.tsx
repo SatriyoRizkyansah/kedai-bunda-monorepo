@@ -1,18 +1,20 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CartPanel } from "./CartPanel";
-import type { CartItem, MetodePembayaran } from "./types";
+import type { CartItem, MetodePembayaran, TipeTransaksi } from "./types";
 
 interface MobileCartDialogProps {
   open: boolean;
   cart: CartItem[];
   bayar: string;
   metodePembayaran: MetodePembayaran;
+  tipeTransaksi: TipeTransaksi;
   namaPelanggan: string;
   onUpdateQuantity: (menuId: number, delta: number) => void;
   onRemoveFromCart: (menuId: number) => void;
   onClearCart: () => void;
   onBayarChange: (value: string) => void;
   onMetodeChange: (value: MetodePembayaran) => void;
+  onTipeChange: (value: TipeTransaksi) => void;
   onNamaChange: (value: string) => void;
   onSubmit: () => void;
   onOpenChange: (open: boolean) => void;
@@ -24,12 +26,14 @@ export function MobileCartDialog({
   cart,
   bayar,
   metodePembayaran,
+  tipeTransaksi,
   namaPelanggan,
   onUpdateQuantity,
   onRemoveFromCart,
   onClearCart,
   onBayarChange,
   onMetodeChange,
+  onTipeChange,
   onNamaChange,
   onSubmit,
   onOpenChange,
@@ -47,12 +51,14 @@ export function MobileCartDialog({
             cart={cart}
             bayar={bayar}
             metodePembayaran={metodePembayaran}
+            tipeTransaksi={tipeTransaksi}
             namaPelanggan={namaPelanggan}
             onUpdateQuantity={onUpdateQuantity}
             onRemoveFromCart={onRemoveFromCart}
             onClearCart={onClearCart}
             onBayarChange={onBayarChange}
             onMetodeChange={onMetodeChange}
+            onTipeChange={onTipeChange}
             onNamaChange={onNamaChange}
             onSubmit={() => {
               onSubmit();

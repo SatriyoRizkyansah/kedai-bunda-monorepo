@@ -12,14 +12,14 @@ export function InventoriPage() {
       <div className="space-y-6">
         <div className="flex flex-col gap-2">
           <h2 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">Inventori</h2>
-          <p className="text-sm sm:text-base text-muted-foreground">Kelola bahan baku, tracking batch FIFO, komposisi menu, dan konversi satuan</p>
+          <p className="text-sm sm:text-base text-muted-foreground">Pantau stok bahan baku dan stok manual menu, tracking batch FIFO, komposisi menu, dan konversi satuan</p>
         </div>
 
         <Tabs defaultValue="bahan-baku" className="space-y-4">
           <TabsList className="grid w-full grid-cols-2 gap-2 p-1 h-auto sm:hidden">
             <TabsTrigger value="bahan-baku" className="flex-col gap-1 py-2 text-[11px] leading-tight whitespace-normal text-center">
               <Package className="h-4 w-4" />
-              <span>Bahan Baku</span>
+              <span>Stok</span>
             </TabsTrigger>
             <TabsTrigger value="tracking" className="flex-col gap-1 py-2 text-[11px] leading-tight whitespace-normal text-center">
               <TrendingDown className="h-4 w-4" />
@@ -39,7 +39,7 @@ export function InventoriPage() {
             <TabsList className="inline-flex min-w-max gap-2 p-1">
               <TabsTrigger value="bahan-baku" className="gap-2 min-w-[130px] justify-center">
                 <Package className="h-4 w-4" />
-                <span className="text-sm">Bahan Baku</span>
+                <span className="text-sm">Stok</span>
               </TabsTrigger>
               <TabsTrigger value="tracking" className="gap-2 min-w-[130px] justify-center">
                 <TrendingDown className="h-4 w-4" />

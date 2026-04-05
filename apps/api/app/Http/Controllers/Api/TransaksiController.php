@@ -84,6 +84,11 @@ class TransaksiController extends Controller
             $query->where('status', $request->status);
         }
 
+        // Filter berdasarkan tipe transaksi
+        if ($request->has('tipe_transaksi')) {
+            $query->where('tipe_transaksi', $request->tipe_transaksi);
+        }
+
         $transaksi = $query->orderBy('created_at', 'desc')->get();
 
         return response()->json([
@@ -153,6 +158,7 @@ class TransaksiController extends Controller
             'user_id' => 'required|exists:users,id',
             'nama_pelanggan' => 'nullable|string|max:255',
             'metode_pembayaran' => 'nullable|in:tunai,qris,transfer',
+            'tipe_transaksi' => 'nullable|in:umum,jatah_karyawan',
             'bayar' => 'required|numeric|min:0',
             'catatan' => 'nullable|string',
             'items' => 'required|array|min:1',
@@ -282,12 +288,22 @@ class TransaksiController extends Controller
                 }
             }
 
-            // Validasi pembayaran
-            if ($request->bayar < $total) {
-                throw new \Exception("Pembayaran kurang. Total: Rp " . number_format($total, 0, ',', '.'));
-            }
+            $tipeTransaksi = $request->input('tipe_transaksi', 'umum');
+            $metodePembayaran = $request->metode_pembayaran ?? 'tunai';
 
-            $kembalian = $request->bayar - $total;
+            if ($tipeTransaksi === 'jatah_karyawan') {
+                $bayar = 0;
+                $kembalian = 0;
+                $metodePembayaran = 'tunai';
+            } else {
+                // Validasi pembayaran
+                if ($request->bayar < $total) {
+                    throw new \Exception("Pembayaran kurang. Total: Rp " . number_format($total, 0, ',', '.'));
+                }
+
+                $bayar = $request->bayar;
+                $kembalian = $bayar - $total;
+            }
 
             // Buat transaksi
             $transaksi = Transaksi::create([
@@ -295,9 +311,10 @@ class TransaksiController extends Controller
                 'user_id' => $request->user_id,
                 'nama_pelanggan' => $request->nama_pelanggan,
                 'total' => $total,
-                'bayar' => $request->bayar,
+                'bayar' => $bayar,
                 'kembalian' => $kembalian,
-                'metode_pembayaran' => $request->metode_pembayaran ?? 'tunai',
+                'metode_pembayaran' => $metodePembayaran,
+                'tipe_transaksi' => $tipeTransaksi,
                 'status' => 'selesai',
                 'catatan' => $request->catatan
             ]);

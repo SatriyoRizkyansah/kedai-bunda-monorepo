@@ -9,7 +9,6 @@ use App\Models\BahanBaku;
 use App\Models\User;
 use App\Models\StokLog;
 use App\Models\MenuStokLog;
-use App\Models\DetailTransaksi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -64,19 +63,23 @@ class DashboardController extends Controller
         // Transaksi hari ini
         $transaksiHariIni = Transaksi::whereDate('created_at', $today)
             ->where('status', 'selesai')
+            ->where('tipe_transaksi', 'umum')
             ->count();
             
         $pendapatanHariIni = Transaksi::whereDate('created_at', $today)
             ->where('status', 'selesai')
+            ->where('tipe_transaksi', 'umum')
             ->sum('total');
             
         // Transaksi bulan ini
         $transaksiBulanIni = Transaksi::where('created_at', '>=', $thisMonth)
             ->where('status', 'selesai')
+            ->where('tipe_transaksi', 'umum')
             ->count();
             
         $pendapatanBulanIni = Transaksi::where('created_at', '>=', $thisMonth)
             ->where('status', 'selesai')
+            ->where('tipe_transaksi', 'umum')
             ->sum('total');
             
         // Menu terlaris bulan ini
@@ -85,6 +88,7 @@ class DashboardController extends Controller
             ->join('menu', 'detail_transaksi.menu_id', '=', 'menu.id')
             ->where('transaksi.created_at', '>=', $thisMonth)
             ->where('transaksi.status', 'selesai')
+            ->where('transaksi.tipe_transaksi', 'umum')
             ->select(
                 'menu.id',
                 'menu.nama',
@@ -113,6 +117,7 @@ class DashboardController extends Controller
             $date = Carbon::now()->subDays($i);
             $pendapatan = Transaksi::whereDate('created_at', $date)
                 ->where('status', 'selesai')
+                ->where('tipe_transaksi', 'umum')
                 ->sum('total');
                 
             $pendapatan7Hari[] = [
@@ -218,7 +223,7 @@ class DashboardController extends Controller
         $tanggalMulai = $request->input('tanggal_mulai', Carbon::now()->startOfMonth()->format('Y-m-d'));
         $tanggalSelesai = $request->input('tanggal_selesai', Carbon::now()->format('Y-m-d'));
         
-        $transaksi = Transaksi::with(['user', 'detailTransaksi.menu'])
+        $transaksiSemua = Transaksi::with(['user', 'detailTransaksi.menu'])
             ->whereBetween('created_at', [
                 $tanggalMulai . ' 00:00:00',
                 $tanggalSelesai . ' 23:59:59'
@@ -226,11 +231,16 @@ class DashboardController extends Controller
             ->where('status', 'selesai')
             ->orderBy('created_at', 'desc')
             ->get();
-            
-        $totalTransaksi = $transaksi->count();
-        $totalPendapatan = $transaksi->sum('total');
-        $totalBayar = $transaksi->sum('bayar');
-        $totalKembalian = $transaksi->sum('kembalian');
+
+        $transaksiPenjualan = $transaksiSemua->where('tipe_transaksi', 'umum');
+        $transaksiJatah = $transaksiSemua->where('tipe_transaksi', 'jatah_karyawan');
+
+        $totalTransaksi = $transaksiSemua->count();
+        $totalTransaksiUmum = $transaksiPenjualan->count();
+        $totalTransaksiJatah = $transaksiJatah->count();
+        $totalPendapatan = $transaksiPenjualan->sum('total');
+        $totalBayar = $transaksiPenjualan->sum('bayar');
+        $totalKembalian = $transaksiPenjualan->sum('kembalian');
         
         // Ringkasan per kategori dengan detail menu
         $penjualanPerKategori = DB::table('detail_transaksi')
@@ -241,6 +251,25 @@ class DashboardController extends Controller
                 $tanggalSelesai . ' 23:59:59'
             ])
             ->where('transaksi.status', 'selesai')
+            ->where('transaksi.tipe_transaksi', 'umum')
+            ->select(
+                'menu.kategori',
+                DB::raw('COUNT(DISTINCT transaksi.id) as jumlah_transaksi'),
+                DB::raw('SUM(detail_transaksi.jumlah) as total_item'),
+                DB::raw('SUM(detail_transaksi.subtotal) as total_pendapatan')
+            )
+            ->groupBy('menu.kategori')
+            ->get();
+
+        $penjualanPerKategoriJatah = DB::table('detail_transaksi')
+            ->join('transaksi', 'detail_transaksi.transaksi_id', '=', 'transaksi.id')
+            ->join('menu', 'detail_transaksi.menu_id', '=', 'menu.id')
+            ->whereBetween('transaksi.created_at', [
+                $tanggalMulai . ' 00:00:00',
+                $tanggalSelesai . ' 23:59:59'
+            ])
+            ->where('transaksi.status', 'selesai')
+            ->where('transaksi.tipe_transaksi', 'jatah_karyawan')
             ->select(
                 'menu.kategori',
                 DB::raw('COUNT(DISTINCT transaksi.id) as jumlah_transaksi'),
@@ -259,6 +288,30 @@ class DashboardController extends Controller
                 $tanggalSelesai . ' 23:59:59'
             ])
             ->where('transaksi.status', 'selesai')
+            ->where('transaksi.tipe_transaksi', 'umum')
+            ->select(
+                'menu.id as menu_id',
+                'menu.nama',
+                'menu.kategori',
+                'menu.harga_jual',
+                DB::raw('SUM(detail_transaksi.jumlah) as total_terjual'),
+                DB::raw('SUM(detail_transaksi.subtotal) as total_pendapatan'),
+                DB::raw('COUNT(DISTINCT transaksi.id) as jumlah_transaksi')
+            )
+            ->groupBy('menu.id', 'menu.nama', 'menu.kategori', 'menu.harga_jual')
+            ->orderBy('menu.kategori', 'asc')
+            ->orderBy('total_pendapatan', 'desc')
+            ->get();
+
+        $detailMenuPerKategoriJatah = DB::table('detail_transaksi')
+            ->join('transaksi', 'detail_transaksi.transaksi_id', '=', 'transaksi.id')
+            ->join('menu', 'detail_transaksi.menu_id', '=', 'menu.id')
+            ->whereBetween('transaksi.created_at', [
+                $tanggalMulai . ' 00:00:00',
+                $tanggalSelesai . ' 23:59:59'
+            ])
+            ->where('transaksi.status', 'selesai')
+            ->where('transaksi.tipe_transaksi', 'jatah_karyawan')
             ->select(
                 'menu.id as menu_id',
                 'menu.nama',
@@ -283,14 +336,18 @@ class DashboardController extends Controller
                 ],
                 'ringkasan' => [
                     'total_transaksi' => $totalTransaksi,
+                    'total_transaksi_umum' => $totalTransaksiUmum,
+                    'total_transaksi_jatah' => $totalTransaksiJatah,
                     'total_pendapatan' => $totalPendapatan,
                     'total_bayar' => $totalBayar,
                     'total_kembalian' => $totalKembalian,
                     'rata_rata_per_transaksi' => $totalTransaksi > 0 ? $totalPendapatan / $totalTransaksi : 0
                 ],
                 'per_kategori' => $penjualanPerKategori,
+                'per_kategori_jatah' => $penjualanPerKategoriJatah,
                 'detail_menu' => $detailMenuPerKategori,
-                'transaksi' => $transaksi
+                'detail_menu_jatah' => $detailMenuPerKategoriJatah,
+                'transaksi' => $transaksiSemua
             ]
         ]);
     }
@@ -593,17 +650,22 @@ class DashboardController extends Controller
         $tanggalMulai = $request->input('tanggal_mulai', Carbon::now()->startOfMonth()->format('Y-m-d'));
         $tanggalSelesai = $request->input('tanggal_selesai', Carbon::now()->format('Y-m-d'));
         
-        // Pendapatan dari penjualan
-        $transaksi = Transaksi::with(['detailTransaksi.menu.komposisiMenu.bahanBaku'])
+        // Transaksi (umum + jatah_karyawan)
+        $transaksiSemua = Transaksi::with(['detailTransaksi.menu.komposisiMenu.bahanBaku'])
             ->whereBetween('created_at', [
                 $tanggalMulai . ' 00:00:00',
                 $tanggalSelesai . ' 23:59:59'
             ])
             ->where('status', 'selesai')
             ->get();
-            
-        $totalPendapatan = $transaksi->sum('total');
-        $totalTransaksi = $transaksi->count();
+
+        $transaksiUmum = $transaksiSemua->where('tipe_transaksi', 'umum');
+        $transaksiJatah = $transaksiSemua->where('tipe_transaksi', 'jatah_karyawan');
+
+        $totalPendapatan = $transaksiUmum->sum('total');
+        $totalTransaksi = $transaksiSemua->count();
+        $totalTransaksiUmum = $transaksiUmum->count();
+        $totalTransaksiJatah = $transaksiJatah->count();
 
         $avgBahanCost = StokLog::select(
                 'bahan_baku_id',
@@ -639,11 +701,21 @@ class DashboardController extends Controller
         $totalHPP = 0;
         $detailPerMenu = [];
         
-        foreach ($transaksi as $trx) {
+        $pendapatanPerHari = [];
+        $hppPerHari = [];
+
+        foreach ($transaksiSemua as $trx) {
+            $dateStr = Carbon::parse($trx->created_at)->format('Y-m-d');
+            $isUmum = $trx->tipe_transaksi === 'umum';
+
+            if ($isUmum) {
+                $pendapatanPerHari[$dateStr] = ($pendapatanPerHari[$dateStr] ?? 0) + (float) $trx->total;
+            }
+
             foreach ($trx->detailTransaksi as $detail) {
                 $menu = $detail->menu;
                 $jumlahTerjual = $detail->jumlah;
-                $pendapatanMenu = $detail->subtotal;
+                $pendapatanMenu = $isUmum ? $detail->subtotal : 0;
                 
                 // Hitung HPP dari komposisi
                 $hppPerUnit = 0;
@@ -664,6 +736,7 @@ class DashboardController extends Controller
                 
                 $hppTotal = $hppPerUnit * $jumlahTerjual;
                 $totalHPP += $hppTotal;
+                $hppPerHari[$dateStr] = ($hppPerHari[$dateStr] ?? 0) + $hppTotal;
                 
                 // Track per menu
                 $menuId = $menu->id ?? 0;
@@ -720,12 +793,8 @@ class DashboardController extends Controller
         while ($currentDate <= $endDate) {
             $dateStr = $currentDate->format('Y-m-d');
             
-            $pendapatanHari = $transaksi->filter(function($trx) use ($dateStr) {
-                return Carbon::parse($trx->created_at)->format('Y-m-d') === $dateStr;
-            })->sum('total');
-            
-            // Simplified HPP calculation for trend
-            $hppHari = $pendapatanHari * ($totalPendapatan > 0 ? ($totalHPP / $totalPendapatan) : 0);
+            $pendapatanHari = $pendapatanPerHari[$dateStr] ?? 0;
+            $hppHari = $hppPerHari[$dateStr] ?? 0;
             
             $trendHarian[] = [
                 'tanggal' => $dateStr,
@@ -748,6 +817,8 @@ class DashboardController extends Controller
                 ],
                 'ringkasan' => [
                     'total_transaksi' => $totalTransaksi,
+                    'total_transaksi_umum' => $totalTransaksiUmum,
+                    'total_transaksi_jatah' => $totalTransaksiJatah,
                     'total_pendapatan' => $totalPendapatan,
                     'total_hpp' => round($totalHPP, 2),
                     'laba_kotor' => round($labaKotor, 2),
