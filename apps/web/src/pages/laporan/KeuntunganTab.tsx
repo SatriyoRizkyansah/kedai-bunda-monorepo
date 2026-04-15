@@ -1,11 +1,11 @@
-import { TrendingUp, FileSpreadsheet } from "lucide-react";
+import { TrendingUp, FileSpreadsheet, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { formatCurrency, formatNumber, formatDate } from "./utils";
-import { exportKeuntunganToExcel } from "./exportService";
+import { exportKeuntunganToExcel, exportKeuntunganToPdf } from "./exportService";
 import type { LaporanKeuntungan, PeriodDate } from "./types";
 
 interface KeuntunganTabProps {
@@ -22,6 +22,12 @@ export function KeuntunganTab({ loading, laporan, period, showExport = true }: K
   const handleExport = () => {
     if (laporan) {
       exportKeuntunganToExcel(laporan, period);
+    }
+  };
+
+  const handleExportPdf = () => {
+    if (laporan) {
+      exportKeuntunganToPdf(laporan, period);
     }
   };
 
@@ -43,10 +49,14 @@ export function KeuntunganTab({ loading, laporan, period, showExport = true }: K
     <div className="space-y-6">
       {/* Export Button */}
       {showExport && (
-        <div className="flex flex-col sm:flex-row sm:justify-end">
+        <div className="flex flex-col sm:flex-row sm:justify-end gap-2">
           <Button onClick={handleExport} className="w-full sm:w-auto">
             <FileSpreadsheet className="h-4 w-4 mr-2" />
             Export Excel
+          </Button>
+          <Button onClick={handleExportPdf} variant="outline" className="w-full sm:w-auto">
+            <FileText className="h-4 w-4 mr-2" />
+            Export PDF
           </Button>
         </div>
       )}

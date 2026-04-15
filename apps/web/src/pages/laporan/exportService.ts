@@ -78,6 +78,7 @@ const resolveStokLogRow = (_stokLog: LaporanStokLog, log: LaporanStokLog["logs"]
 
 export const exportPenjualanToExcel = (laporan: LaporanPenjualan, period: PeriodDate) => {
   const wb = XLSX.utils.book_new();
+  const metode = laporan.ringkasan.metode_pembayaran;
 
   // Ringkasan
   const ringkasanData = [
@@ -87,6 +88,14 @@ export const exportPenjualanToExcel = (laporan: LaporanPenjualan, period: Period
     ["Total Transaksi", laporan.ringkasan.total_transaksi],
     ["Total Pendapatan", laporan.ringkasan.total_pendapatan],
     ["Rata-rata per Transaksi", laporan.ringkasan.rata_rata_per_transaksi],
+    [],
+    ["METODE PEMBAYARAN (TRANSAKSI UMUM)"],
+    ["Tunai - Jumlah", metode?.tunai?.jumlah_transaksi ?? 0],
+    ["Tunai - Nominal", metode?.tunai?.total_nominal ?? 0],
+    ["QRIS - Jumlah", metode?.qris?.jumlah_transaksi ?? 0],
+    ["QRIS - Nominal", metode?.qris?.total_nominal ?? 0],
+    ["Transfer - Jumlah", metode?.transfer?.jumlah_transaksi ?? 0],
+    ["Transfer - Nominal", metode?.transfer?.total_nominal ?? 0],
   ];
   const ws1 = XLSX.utils.aoa_to_sheet(ringkasanData);
   XLSX.utils.book_append_sheet(wb, ws1, "Ringkasan");
@@ -104,6 +113,70 @@ export const exportPenjualanToExcel = (laporan: LaporanPenjualan, period: Period
   XLSX.utils.book_append_sheet(wb, ws3, "Detail Menu");
 
   XLSX.writeFile(wb, `Laporan_Penjualan_${period.mulai}_${period.selesai}.xlsx`);
+};
+
+export const exportPenjualanToPdf = (laporan: LaporanPenjualan, period: PeriodDate) => {
+  const doc = new jsPDF({ orientation: "p", unit: "mm", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const marginX = 14;
+  const metode = laporan.ringkasan.metode_pembayaran;
+
+  doc.setFontSize(16);
+  doc.text("Laporan Penjualan", marginX, 16);
+  doc.setFontSize(10);
+  doc.text(`Periode: ${formatDate(period.mulai)} - ${formatDate(period.selesai)}`, marginX, 22);
+  doc.text(`Generated: ${new Date().toLocaleString("id-ID")}`, marginX, 27);
+  doc.setDrawColor(180);
+  doc.line(marginX, 30, pageWidth - marginX, 30);
+
+  autoTable(doc, {
+    startY: 34,
+    head: [["Metrik", "Nilai"]],
+    body: [
+      ["Total Transaksi", formatNumber(laporan.ringkasan.total_transaksi)],
+      ["Total Pendapatan", formatCurrency(laporan.ringkasan.total_pendapatan)],
+      ["Total Bayar", formatCurrency(laporan.ringkasan.total_bayar)],
+      ["Total Kembalian", formatCurrency(laporan.ringkasan.total_kembalian)],
+      ["Rata-rata / Transaksi", formatCurrency(laporan.ringkasan.rata_rata_per_transaksi)],
+      ["Tunai (jumlah)", formatNumber(metode?.tunai?.jumlah_transaksi ?? 0)],
+      ["Tunai (nominal)", formatCurrency(metode?.tunai?.total_nominal ?? 0)],
+      ["QRIS (jumlah)", formatNumber(metode?.qris?.jumlah_transaksi ?? 0)],
+      ["QRIS (nominal)", formatCurrency(metode?.qris?.total_nominal ?? 0)],
+      ["Transfer (jumlah)", formatNumber(metode?.transfer?.jumlah_transaksi ?? 0)],
+      ["Transfer (nominal)", formatCurrency(metode?.transfer?.total_nominal ?? 0)],
+    ],
+    theme: "grid",
+    styles: { fontSize: 9 },
+    headStyles: { fillColor: [245, 245, 245], textColor: 20 },
+    margin: { left: marginX, right: marginX },
+  });
+
+  let cursorY = (doc as any).lastAutoTable.finalY + 6;
+
+  autoTable(doc, {
+    startY: cursorY,
+    head: [["Kategori", "Jumlah Transaksi", "Total Item", "Total Pendapatan"]],
+    body: laporan.per_kategori.map((k) => [k.kategori, formatNumber(k.jumlah_transaksi), formatNumber(k.total_item), formatCurrency(k.total_pendapatan)]),
+    theme: "striped",
+    styles: { fontSize: 8 },
+    headStyles: { fillColor: [245, 245, 245], textColor: 20 },
+    margin: { left: marginX, right: marginX },
+  });
+
+  cursorY = (doc as any).lastAutoTable.finalY + 6;
+
+  autoTable(doc, {
+    startY: cursorY,
+    head: [["Menu", "Kategori", "@Harga", "Terjual", "Transaksi", "Pendapatan"]],
+    body: laporan.detail_menu.map((m) => [m.nama, m.kategori, formatCurrency(m.harga_jual), formatNumber(m.total_terjual), formatNumber(m.jumlah_transaksi), formatCurrency(m.total_pendapatan)]),
+    theme: "striped",
+    styles: { fontSize: 7 },
+    headStyles: { fillColor: [245, 245, 245], textColor: 20 },
+    margin: { left: marginX, right: marginX },
+    columnStyles: { 0: { cellWidth: 50 }, 1: { cellWidth: 25 } },
+  });
+
+  doc.save(`Laporan_Penjualan_${period.mulai}_${period.selesai}.pdf`);
 };
 
 export const exportStokLogToExcel = (laporan: LaporanStokLog, period: PeriodDate) => {
@@ -142,6 +215,76 @@ export const exportStokLogToExcel = (laporan: LaporanStokLog, period: PeriodDate
   XLSX.writeFile(wb, `Laporan_Stok_${period.mulai}_${period.selesai}.xlsx`);
 };
 
+export const exportStokLogToPdf = (laporan: LaporanStokLog, period: PeriodDate) => {
+  const doc = new jsPDF({ orientation: "p", unit: "mm", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const marginX = 14;
+
+  doc.setFontSize(16);
+  doc.text("Laporan Stok Log", marginX, 16);
+  doc.setFontSize(10);
+  doc.text(`Periode: ${formatDate(period.mulai)} - ${formatDate(period.selesai)}`, marginX, 22);
+  doc.text(`Generated: ${new Date().toLocaleString("id-ID")}`, marginX, 27);
+  doc.setDrawColor(180);
+  doc.line(marginX, 30, pageWidth - marginX, 30);
+
+  autoTable(doc, {
+    startY: 34,
+    head: [["Metrik", "Nilai"]],
+    body: [
+      ["Stok Masuk (Transaksi)", formatNumber(laporan.ringkasan.stok_masuk.jumlah_transaksi)],
+      ["Stok Masuk (Unit)", formatNumber(laporan.ringkasan.stok_masuk.total_unit)],
+      ["Stok Masuk (Nilai)", formatCurrency(laporan.ringkasan.stok_masuk.nilai)],
+      ["Stok Keluar (Transaksi)", formatNumber(laporan.ringkasan.stok_keluar.jumlah_transaksi)],
+      ["Stok Keluar (Unit)", formatNumber(laporan.ringkasan.stok_keluar.total_unit)],
+      ["Stok Keluar (Nilai)", formatCurrency(laporan.ringkasan.stok_keluar.nilai)],
+    ],
+    theme: "grid",
+    styles: { fontSize: 9 },
+    headStyles: { fillColor: [245, 245, 245], textColor: 20 },
+    margin: { left: marginX, right: marginX },
+  });
+
+  let cursorY = (doc as any).lastAutoTable.finalY + 6;
+
+  autoTable(doc, {
+    startY: cursorY,
+    head: [["Bahan Baku", "Satuan", "Masuk", "Keluar", "Selisih", "Nilai Masuk", "Nilai Keluar"]],
+    body: laporan.per_bahan_baku.map((b) => [b.nama, b.satuan_dasar, formatNumber(b.stok_masuk), formatNumber(b.stok_keluar), formatNumber(b.selisih), formatCurrency(b.nilai_masuk), formatCurrency(b.nilai_keluar)]),
+    theme: "striped",
+    styles: { fontSize: 7 },
+    headStyles: { fillColor: [245, 245, 245], textColor: 20 },
+    margin: { left: marginX, right: marginX },
+    columnStyles: { 0: { cellWidth: 60 }, 1: { cellWidth: 18 } },
+  });
+
+  cursorY = (doc as any).lastAutoTable.finalY + 6;
+  const maps = buildStokCostMaps(laporan);
+  const maxLogs = 300;
+
+  autoTable(doc, {
+    startY: cursorY,
+    head: [["Tanggal", "Item", "Tipe", "Qty", "Satuan", "Harga", "Sumber", "User"]],
+    body: laporan.logs.slice(0, maxLogs).map((l) => {
+      const row = resolveStokLogRow(laporan, l, maps);
+      return [formatDateTime(l.created_at), row.itemName, l.tipe === "masuk" ? "Masuk" : "Keluar", formatNumber(l.jumlah), row.satuan, row.totalHarga !== null ? formatCurrency(row.totalHarga) : "-", row.sumberHarga, l.user?.name ?? "-"];
+    }),
+    theme: "striped",
+    styles: { fontSize: 7 },
+    headStyles: { fillColor: [245, 245, 245], textColor: 20 },
+    margin: { left: marginX, right: marginX },
+    columnStyles: { 0: { cellWidth: 28 }, 1: { cellWidth: 55 }, 7: { cellWidth: 22 } },
+  });
+
+  if (laporan.logs.length > maxLogs) {
+    const endY = (doc as any).lastAutoTable.finalY + 6;
+    doc.setFontSize(9);
+    doc.text(`Catatan: log ditampilkan ${maxLogs} dari ${laporan.logs.length} data.`, marginX, Math.min(endY, 285));
+  }
+
+  doc.save(`Laporan_Stok_${period.mulai}_${period.selesai}.pdf`);
+};
+
 export const exportKeuntunganToExcel = (laporan: LaporanKeuntungan, period: PeriodDate) => {
   const wb = XLSX.utils.book_new();
 
@@ -174,9 +317,73 @@ export const exportKeuntunganToExcel = (laporan: LaporanKeuntungan, period: Peri
   XLSX.writeFile(wb, `Laporan_Keuntungan_${period.mulai}_${period.selesai}.xlsx`);
 };
 
+export const exportKeuntunganToPdf = (laporan: LaporanKeuntungan, period: PeriodDate) => {
+  const doc = new jsPDF({ orientation: "p", unit: "mm", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const marginX = 14;
+
+  doc.setFontSize(16);
+  doc.text("Laporan Keuntungan", marginX, 16);
+  doc.setFontSize(10);
+  doc.text(`Periode: ${formatDate(period.mulai)} - ${formatDate(period.selesai)}`, marginX, 22);
+  doc.text(`Generated: ${new Date().toLocaleString("id-ID")}`, marginX, 27);
+  doc.setDrawColor(180);
+  doc.line(marginX, 30, pageWidth - marginX, 30);
+
+  autoTable(doc, {
+    startY: 34,
+    head: [["Metrik", "Nilai"]],
+    body: [
+      ["Total Transaksi", formatNumber(laporan.ringkasan.total_transaksi)],
+      ["Total Pendapatan", formatCurrency(laporan.ringkasan.total_pendapatan)],
+      ["Total HPP", formatCurrency(laporan.ringkasan.total_hpp)],
+      ["Laba Kotor", formatCurrency(laporan.ringkasan.laba_kotor)],
+      ["Margin Kotor", `${laporan.ringkasan.margin_kotor_persen.toFixed(1)}%`],
+    ],
+    theme: "grid",
+    styles: { fontSize: 9 },
+    headStyles: { fillColor: [245, 245, 245], textColor: 20 },
+    margin: { left: marginX, right: marginX },
+  });
+
+  let cursorY = (doc as any).lastAutoTable.finalY + 6;
+
+  autoTable(doc, {
+    startY: cursorY,
+    head: [["Menu", "Kategori", "Terjual", "Pendapatan", "HPP", "Laba", "Margin"]],
+    body: laporan.per_menu.map((m) => {
+      const margin = m.total_pendapatan > 0 ? (m.total_laba / m.total_pendapatan) * 100 : 0;
+      return [m.nama_menu, m.kategori, formatNumber(m.jumlah_terjual), formatCurrency(m.total_pendapatan), formatCurrency(m.total_hpp), formatCurrency(m.total_laba), `${margin.toFixed(1)}%`];
+    }),
+    theme: "striped",
+    styles: { fontSize: 7 },
+    headStyles: { fillColor: [245, 245, 245], textColor: 20 },
+    margin: { left: marginX, right: marginX },
+    columnStyles: { 0: { cellWidth: 55 }, 1: { cellWidth: 25 } },
+  });
+
+  cursorY = (doc as any).lastAutoTable.finalY + 6;
+
+  autoTable(doc, {
+    startY: cursorY,
+    head: [["Tanggal", "Hari", "Pendapatan", "HPP", "Laba", "Margin"]],
+    body: laporan.trend_harian.map((t) => {
+      const margin = t.pendapatan > 0 ? (t.laba / t.pendapatan) * 100 : 0;
+      return [formatDate(t.tanggal), t.hari, formatCurrency(t.pendapatan), formatCurrency(t.hpp), formatCurrency(t.laba), `${margin.toFixed(1)}%`];
+    }),
+    theme: "striped",
+    styles: { fontSize: 8 },
+    headStyles: { fillColor: [245, 245, 245], textColor: 20 },
+    margin: { left: marginX, right: marginX },
+  });
+
+  doc.save(`Laporan_Keuntungan_${period.mulai}_${period.selesai}.pdf`);
+};
+
 export const exportLaporanLengkapToExcel = (data: LaporanLengkap, period: PeriodDate) => {
   const wb = XLSX.utils.book_new();
   const generatedAt = new Date().toISOString();
+  const metode = data.penjualan.ringkasan.metode_pembayaran;
 
   // Ringkasan (gabungan)
   const ringkasanData = [
@@ -188,6 +395,12 @@ export const exportLaporanLengkapToExcel = (data: LaporanLengkap, period: Period
     ["Total Transaksi", data.penjualan.ringkasan.total_transaksi],
     ["Total Pendapatan", data.penjualan.ringkasan.total_pendapatan],
     ["Rata-rata / Transaksi", data.penjualan.ringkasan.rata_rata_per_transaksi],
+    ["Tunai - Jumlah", metode?.tunai?.jumlah_transaksi ?? 0],
+    ["Tunai - Nominal", metode?.tunai?.total_nominal ?? 0],
+    ["QRIS - Jumlah", metode?.qris?.jumlah_transaksi ?? 0],
+    ["QRIS - Nominal", metode?.qris?.total_nominal ?? 0],
+    ["Transfer - Jumlah", metode?.transfer?.jumlah_transaksi ?? 0],
+    ["Transfer - Nominal", metode?.transfer?.total_nominal ?? 0],
     [],
     ["KEUNTUNGAN"],
     ["Total Pendapatan", data.keuntungan.ringkasan.total_pendapatan],
@@ -274,6 +487,7 @@ export const exportLaporanLengkapToPdf = (data: LaporanLengkap, period: PeriodDa
   const marginX = 14;
   const now = new Date();
   const generated = now.toLocaleString("id-ID");
+  const metode = data.penjualan.ringkasan.metode_pembayaran;
 
   const addTitle = () => {
     doc.setFontSize(16);
@@ -304,6 +518,12 @@ export const exportLaporanLengkapToPdf = (data: LaporanLengkap, period: PeriodDa
       ["Total Pendapatan", formatCurrency(data.penjualan.ringkasan.total_pendapatan)],
       ["Total Bayar", formatCurrency(data.penjualan.ringkasan.total_bayar)],
       ["Rata-rata / Transaksi", formatCurrency(data.penjualan.ringkasan.rata_rata_per_transaksi)],
+      ["Tunai (jumlah)", formatNumber(metode?.tunai?.jumlah_transaksi ?? 0)],
+      ["Tunai (nominal)", formatCurrency(metode?.tunai?.total_nominal ?? 0)],
+      ["QRIS (jumlah)", formatNumber(metode?.qris?.jumlah_transaksi ?? 0)],
+      ["QRIS (nominal)", formatCurrency(metode?.qris?.total_nominal ?? 0)],
+      ["Transfer (jumlah)", formatNumber(metode?.transfer?.jumlah_transaksi ?? 0)],
+      ["Transfer (nominal)", formatCurrency(metode?.transfer?.total_nominal ?? 0)],
     ],
     theme: "grid",
     styles: { fontSize: 9 },

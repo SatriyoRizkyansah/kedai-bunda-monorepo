@@ -25,7 +25,10 @@ export function BahanBakuTab() {
   const [loading, setLoading] = useState(true);
   const [loadingMenuManual, setLoadingMenuManual] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [bahanStockFilter, setBahanStockFilter] = useState<"semua" | "menipis" | "habis">("semua");
   const [menuSearchTerm, setMenuSearchTerm] = useState("");
+  const [menuKategoriFilter, setMenuKategoriFilter] = useState<"semua" | "makanan" | "minuman">("semua");
+  const [menuStockFilter, setMenuStockFilter] = useState<"semua" | "menipis" | "habis">("semua");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<BahanBaku | null>(null);
   const [userRole, setUserRole] = useState<string>("");
@@ -150,14 +153,30 @@ export function BahanBakuTab() {
     }
   };
 
-  const filteredBahanBaku = bahanBaku.filter((item) => item.nama.toLowerCase().includes(searchTerm.toLowerCase()));
-  const filteredMenuManual = menuManual.filter((item) => item.nama.toLowerCase().includes(menuSearchTerm.toLowerCase()));
-  const isLowStock = (item: BahanBaku) => Number(item.stok_tersedia || 0) < 10;
   const getMenuStock = (item: Menu) => {
     const rawValue = item.stok_sisa ?? item.stok ?? 0;
     const parsed = Number(rawValue ?? 0);
     return Number.isNaN(parsed) ? 0 : parsed;
   };
+
+  const filteredBahanBaku = bahanBaku.filter((item) => {
+    const stock = Number(item.stok_tersedia || 0);
+    const matchesSearch = item.nama.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStock = bahanStockFilter === "semua" || (bahanStockFilter === "habis" && stock <= 0) || (bahanStockFilter === "menipis" && stock > 0 && stock < 10);
+    return matchesSearch && matchesStock;
+  });
+
+  const filteredMenuManual = menuManual.filter((item) => {
+    const stock = getMenuStock(item);
+    const matchesSearch = item.nama.toLowerCase().includes(menuSearchTerm.toLowerCase());
+    const matchesKategori = menuKategoriFilter === "semua" || item.kategori?.toLowerCase() === menuKategoriFilter;
+    const matchesStock = menuStockFilter === "semua" || (menuStockFilter === "habis" && stock <= 0) || (menuStockFilter === "menipis" && stock > 0 && stock < 5);
+    return matchesSearch && matchesKategori && matchesStock;
+  });
+
+  const bahanFilterAktif = Boolean(searchTerm.trim()) || bahanStockFilter !== "semua";
+  const menuFilterAktif = Boolean(menuSearchTerm.trim()) || menuKategoriFilter !== "semua" || menuStockFilter !== "semua";
+  const isLowStock = (item: BahanBaku) => Number(item.stok_tersedia || 0) < 10;
   const isMenuLowStock = (item: Menu) => getMenuStock(item) < 5;
 
   const handleOpenMenuDialog = (item?: Menu) => {
@@ -486,9 +505,16 @@ export function BahanBakuTab() {
         <p className="text-xs sm:text-sm text-muted-foreground">Pantau stok bahan baku dan status ketersediaannya</p>
       </div>
       <div className="flex flex-col sm:flex-row justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Cari bahan baku..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+        <div className="flex flex-col sm:flex-row gap-2 flex-1">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Cari bahan baku..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+          </div>
+          <select value={bahanStockFilter} onChange={(e) => setBahanStockFilter(e.target.value as "semua" | "menipis" | "habis")} className="w-full sm:w-auto px-3 py-2 rounded-md border border-input bg-background text-sm">
+            <option value="semua">Semua Stok</option>
+            <option value="menipis">Stok Menipis</option>
+            <option value="habis">Stok Habis</option>
+          </select>
         </div>
         <Button onClick={() => handleOpenDialog()} className="gap-2 w-full sm:w-auto" style={!isAdmin ? { display: "none" } : {}}>
           <Plus className="h-4 w-4" />
@@ -502,7 +528,7 @@ export function BahanBakuTab() {
           ) : filteredBahanBaku.length === 0 ? (
             <div className="text-center py-12">
               <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">{searchTerm ? "Tidak ada hasil pencarian" : "Belum ada data bahan baku"}</p>
+              <p className="text-muted-foreground">{bahanFilterAktif ? "Tidak ada bahan baku sesuai filter" : "Belum ada data bahan baku"}</p>
             </div>
           ) : (
             <>
@@ -645,6 +671,16 @@ export function BahanBakuTab() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Cari menu manual..." value={menuSearchTerm} onChange={(e) => setMenuSearchTerm(e.target.value)} className="pl-10" />
           </div>
+          <select value={menuKategoriFilter} onChange={(e) => setMenuKategoriFilter(e.target.value as "semua" | "makanan" | "minuman")} className="w-full sm:w-auto px-3 py-2 rounded-md border border-input bg-background text-sm">
+            <option value="semua">Semua Kategori</option>
+            <option value="makanan">Makanan</option>
+            <option value="minuman">Minuman</option>
+          </select>
+          <select value={menuStockFilter} onChange={(e) => setMenuStockFilter(e.target.value as "semua" | "menipis" | "habis")} className="w-full sm:w-auto px-3 py-2 rounded-md border border-input bg-background text-sm">
+            <option value="semua">Semua Stok</option>
+            <option value="menipis">Stok Menipis</option>
+            <option value="habis">Stok Habis</option>
+          </select>
           {isAdmin && (
             <Button onClick={() => handleOpenMenuDialog()} className="gap-2 w-full sm:w-auto">
               <Plus className="h-4 w-4" />
@@ -661,7 +697,7 @@ export function BahanBakuTab() {
           ) : filteredMenuManual.length === 0 ? (
             <div className="text-center py-12">
               <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">{menuSearchTerm ? "Tidak ada hasil pencarian" : "Belum ada menu stok manual"}</p>
+              <p className="text-muted-foreground">{menuFilterAktif ? "Tidak ada menu sesuai filter" : "Belum ada menu stok manual"}</p>
             </div>
           ) : (
             <>

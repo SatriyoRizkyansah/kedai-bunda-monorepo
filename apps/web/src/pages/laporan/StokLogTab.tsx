@@ -1,11 +1,11 @@
-import { ArrowDownCircle, ArrowUpCircle, FileSpreadsheet } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, FileSpreadsheet, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { formatCurrency, formatNumber, formatDateTime } from "./utils";
-import { exportStokLogToExcel } from "./exportService";
+import { exportStokLogToExcel, exportStokLogToPdf } from "./exportService";
 import type { LaporanStokLog, PeriodDate } from "./types";
 
 interface StokLogTabProps {
@@ -19,6 +19,12 @@ export function StokLogTab({ loading, laporan, period, showExport = true }: Stok
   const handleExport = () => {
     if (laporan) {
       exportStokLogToExcel(laporan, period);
+    }
+  };
+
+  const handleExportPdf = () => {
+    if (laporan) {
+      exportStokLogToPdf(laporan, period);
     }
   };
 
@@ -66,10 +72,14 @@ export function StokLogTab({ loading, laporan, period, showExport = true }: Stok
     <div className="space-y-6">
       {/* Export Button */}
       {showExport && (
-        <div className="flex flex-col sm:flex-row sm:justify-end">
+        <div className="flex flex-col sm:flex-row sm:justify-end gap-2">
           <Button onClick={handleExport} className="w-full sm:w-auto">
             <FileSpreadsheet className="h-4 w-4 mr-2" />
             Export Excel
+          </Button>
+          <Button onClick={handleExportPdf} variant="outline" className="w-full sm:w-auto">
+            <FileText className="h-4 w-4 mr-2" />
+            Export PDF
           </Button>
         </div>
       )}

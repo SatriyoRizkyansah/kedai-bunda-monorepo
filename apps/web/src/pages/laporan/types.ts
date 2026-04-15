@@ -15,6 +15,11 @@ export interface RingkasanPenjualan {
   total_bayar: number;
   total_kembalian: number;
   rata_rata_per_transaksi: number;
+  metode_pembayaran?: {
+    tunai: { jumlah_transaksi: number; total_nominal: number };
+    qris: { jumlah_transaksi: number; total_nominal: number };
+    transfer: { jumlah_transaksi: number; total_nominal: number };
+  };
 }
 
 export interface PenjualanPerKategori {

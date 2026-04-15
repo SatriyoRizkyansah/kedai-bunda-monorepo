@@ -241,6 +241,27 @@ class DashboardController extends Controller
         $totalPendapatan = $transaksiPenjualan->sum('total');
         $totalBayar = $transaksiPenjualan->sum('bayar');
         $totalKembalian = $transaksiPenjualan->sum('kembalian');
+
+        $tunaiTransaksi = $transaksiPenjualan->filter(function ($trx) {
+            return ($trx->metode_pembayaran ?? 'tunai') === 'tunai';
+        });
+        $qrisTransaksi = $transaksiPenjualan->where('metode_pembayaran', 'qris');
+        $transferTransaksi = $transaksiPenjualan->where('metode_pembayaran', 'transfer');
+
+        $metodePembayaran = [
+            'tunai' => [
+                'jumlah_transaksi' => $tunaiTransaksi->count(),
+                'total_nominal' => (float) $tunaiTransaksi->sum('total'),
+            ],
+            'qris' => [
+                'jumlah_transaksi' => $qrisTransaksi->count(),
+                'total_nominal' => (float) $qrisTransaksi->sum('total'),
+            ],
+            'transfer' => [
+                'jumlah_transaksi' => $transferTransaksi->count(),
+                'total_nominal' => (float) $transferTransaksi->sum('total'),
+            ],
+        ];
         
         // Ringkasan per kategori dengan detail menu
         $penjualanPerKategori = DB::table('detail_transaksi')
@@ -341,7 +362,8 @@ class DashboardController extends Controller
                     'total_pendapatan' => $totalPendapatan,
                     'total_bayar' => $totalBayar,
                     'total_kembalian' => $totalKembalian,
-                    'rata_rata_per_transaksi' => $totalTransaksi > 0 ? $totalPendapatan / $totalTransaksi : 0
+                    'rata_rata_per_transaksi' => $totalTransaksi > 0 ? $totalPendapatan / $totalTransaksi : 0,
+                    'metode_pembayaran' => $metodePembayaran,
                 ],
                 'per_kategori' => $penjualanPerKategori,
                 'per_kategori_jatah' => $penjualanPerKategoriJatah,

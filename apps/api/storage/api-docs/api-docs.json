@@ -1216,7 +1216,7 @@
                                                         "type": "integer",
                                                         "example": 1
                                                     },
-                                                    "konversi_bahan_id": {
+                                                    "bahan_baku_id": {
                                                         "type": "integer",
                                                         "example": 1
                                                     },
@@ -1228,11 +1228,7 @@
                                                     "jumlah": {
                                                         "type": "number",
                                                         "format": "float",
-<<<<<<< HEAD
-                                                        "example": 0.2
-=======
                                                         "example": 1
->>>>>>> deb1523329aba5e1759b3981d1465ad3930a2b10
                                                     }
                                                 },
                                                 "type": "object"
@@ -1265,11 +1261,7 @@
                             "schema": {
                                 "required": [
                                     "menu_id",
-<<<<<<< HEAD
-                                    "konversi_bahan_id",
-=======
                                     "bahan_baku_id",
->>>>>>> deb1523329aba5e1759b3981d1465ad3930a2b10
                                     "jumlah"
                                 ],
                                 "properties": {
@@ -1277,7 +1269,7 @@
                                         "type": "integer",
                                         "example": 1
                                     },
-                                    "konversi_bahan_id": {
+                                    "bahan_baku_id": {
                                         "type": "integer",
                                         "example": 5
                                     },
@@ -1289,11 +1281,7 @@
                                     "jumlah": {
                                         "type": "number",
                                         "format": "float",
-<<<<<<< HEAD
-                                        "example": 0.2
-=======
                                         "example": 1
->>>>>>> deb1523329aba5e1759b3981d1465ad3930a2b10
                                     }
                                 },
                                 "type": "object"
@@ -1337,11 +1325,7 @@
                                         },
                                         "pesan": {
                                             "type": "string",
-<<<<<<< HEAD
-                                            "example": "Konversi bahan ini sudah ada di komposisi menu"
-=======
                                             "example": "Bahan baku ini sudah ada di komposisi menu"
->>>>>>> deb1523329aba5e1759b3981d1465ad3930a2b10
                                         }
                                     },
                                     "type": "object"
@@ -3197,13 +3181,13 @@
                     {
                         "name": "status",
                         "in": "query",
-                        "description": "Filter berdasarkan status (selesai/dibatalkan)",
+                        "description": "Filter berdasarkan status (selesai/batal)",
                         "required": false,
                         "schema": {
                             "type": "string",
                             "enum": [
                                 "selesai",
-                                "dibatalkan"
+                                "batal"
                             ],
                             "example": "selesai"
                         }

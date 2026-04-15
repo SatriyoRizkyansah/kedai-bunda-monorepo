@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { ChevronRight, FileSpreadsheet } from "lucide-react";
+import { ChevronRight, FileSpreadsheet, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { formatCurrency, formatNumber } from "./utils";
-import { exportPenjualanToExcel } from "./exportService";
+import { exportPenjualanToExcel, exportPenjualanToPdf } from "./exportService";
 import type { LaporanPenjualan, PeriodDate } from "./types";
 
 interface PenjualanTabProps {
@@ -22,10 +22,17 @@ export function PenjualanTab({ loading, laporan, period, showExport = true }: Pe
   const showTipeBreakdown = totalUmum !== undefined || totalJatah !== undefined;
   const kategoriJatah = laporan?.per_kategori_jatah || [];
   const detailMenuJatah = laporan?.detail_menu_jatah || [];
+  const metodePembayaran = laporan?.ringkasan.metode_pembayaran;
 
   const handleExport = () => {
     if (laporan) {
       exportPenjualanToExcel(laporan, period);
+    }
+  };
+
+  const handleExportPdf = () => {
+    if (laporan) {
+      exportPenjualanToPdf(laporan, period);
     }
   };
 
@@ -47,10 +54,14 @@ export function PenjualanTab({ loading, laporan, period, showExport = true }: Pe
     <div className="space-y-6">
       {/* Export Button */}
       {showExport && (
-        <div className="flex flex-col sm:flex-row sm:justify-end">
+        <div className="flex flex-col sm:flex-row sm:justify-end gap-2">
           <Button onClick={handleExport} className="w-full sm:w-auto">
             <FileSpreadsheet className="h-4 w-4 mr-2" />
             Export Excel
+          </Button>
+          <Button onClick={handleExportPdf} variant="outline" className="w-full sm:w-auto">
+            <FileText className="h-4 w-4 mr-2" />
+            Export PDF
           </Button>
         </div>
       )}
@@ -88,6 +99,32 @@ export function PenjualanTab({ loading, laporan, period, showExport = true }: Pe
           </CardContent>
         </Card>
       </div>
+
+      {/* Metode Pembayaran */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Metode Pembayaran (Transaksi Umum)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+            <div className="rounded-lg border p-4">
+              <p className="text-xs sm:text-sm text-muted-foreground">Tunai</p>
+              <p className="text-lg font-bold mt-1">{formatNumber(metodePembayaran?.tunai?.jumlah_transaksi ?? 0)} transaksi</p>
+              <p className="text-sm text-green-600 mt-1">{formatCurrency(metodePembayaran?.tunai?.total_nominal ?? 0)}</p>
+            </div>
+            <div className="rounded-lg border p-4">
+              <p className="text-xs sm:text-sm text-muted-foreground">QRIS</p>
+              <p className="text-lg font-bold mt-1">{formatNumber(metodePembayaran?.qris?.jumlah_transaksi ?? 0)} transaksi</p>
+              <p className="text-sm text-green-600 mt-1">{formatCurrency(metodePembayaran?.qris?.total_nominal ?? 0)}</p>
+            </div>
+            <div className="rounded-lg border p-4">
+              <p className="text-xs sm:text-sm text-muted-foreground">Transfer</p>
+              <p className="text-lg font-bold mt-1">{formatNumber(metodePembayaran?.transfer?.jumlah_transaksi ?? 0)} transaksi</p>
+              <p className="text-sm text-green-600 mt-1">{formatCurrency(metodePembayaran?.transfer?.total_nominal ?? 0)}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Per Kategori - Umum */}
       <Card>
